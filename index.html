@@ -1129,9 +1129,15 @@
       letter-spacing: 0.12em;
     }
 
-    /* ============================================================
-       SCROLLBAR
-    ============================================================ */
+        /* Card con player — nessun hover, nessuna transizione sulla card */
+        .archive-item.has-player {
+          pointer-events: none;
+        }
+
+        .archive-item.has-player .player-ui,
+        .archive-item.has-player .player-ui * {
+          pointer-events: all;
+        }
     ::-webkit-scrollbar { width: 3px; }
     ::-webkit-scrollbar-track { background: var(--black); }
     ::-webkit-scrollbar-thumb { background: var(--border); }
@@ -1294,7 +1300,7 @@
         </article>
 
         <!-- EVIDENCE_A — ACTIVE WITH PLAYER -->
-        <article class="archive-item" aria-label="Evidence A: Sweet Descent">
+        <article class="archive-item has-player" aria-label="Evidence A: Sweet Descent">
           <div class="file-tag">
             <span>EVIDENCE_A</span>
             <span class="status-badge active">AVAILABLE</span>
@@ -1601,7 +1607,7 @@
       });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.archive-item').forEach((el, i) => {
+    document.querySelectorAll('.archive-item:not(.has-player)').forEach((el, i) => {
       el.style.cssText = `opacity: 0; transform: translateY(20px); transition: opacity 0.7s ease ${i * 0.15}s, transform 0.7s ease ${i * 0.15}s;`;
       observer.observe(el);
     });
