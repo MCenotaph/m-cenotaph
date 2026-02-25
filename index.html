@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M. CENOTAPH — AUTHORIZED ACCESS TERMINAL</title>
+  <meta name="description" content="Digital archive. Restricted access. Proceed with authorization." />
+  <meta property="og:title" content="M. CENOTAPH" />
+  <meta property="og:description" content="Archive Status: RECOVERED. Access Level: CONDITIONAL." />
+  <meta property="og:image" content="og-preview.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=IBM+Plex+Serif:ital,wght@0,200;0,300;1,200;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       TOKENS & RESET
+    ============================================================ */
+    :root {
+      --black:       #020204;
+      --void:        #07070b;
+      --surface:     #0d0d12;
+      --border:      #1a1a22;
+      --border-soft: #131318;
+      --dim:         #2a2a38;
+      --muted:       #3d3d52;
+      --ghost:       #5a5a78;
+      --ash:         #8888aa;
+      --silver:      #b0b0cc;
+      --bone:        #d4d4e8;
+      --white:       #eeeef6;
+      --accent:      #c8c8ff;
+      --accent-hot:  #a0a0ff;
+      --danger:      #ff4444;
+      --gold:        #c8a96e;
+      --gold-dim:    #7a6640;
+
+      --font-mono:   'IBM Plex Mono', 'Courier New', monospace;
+      --font-serif:  'IBM Plex Serif', Georgia, serif;
+
+      --gutter: clamp(1.5rem, 5vw, 4rem);
+      --col-max: 1100px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 14px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--black);
+      color: var(--silver);
+      font-family: var(--font-mono);
+      font-weight: 300;
+      line-height: 1.7;
+      overflow-x: hidden;
+      cursor: crosshair;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: var(--black);
+    }
+
+    /* ============================================================
+       NOISE OVERLAY
+    ============================================================ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      background-size: 128px 128px;
+      opacity: 0.028;
+      mix-blend-mode: overlay;
+      animation: noiseShift 0.15s steps(2) infinite;
+    }
+
+    @keyframes noiseShift {
+      0%   { background-position: 0 0; }
+      25%  { background-position: 30px -15px; }
+      50%  { background-position: -20px 10px; }
+      75%  { background-position: 15px 25px; }
+      100% { background-position: 0 0; }
+    }
+
+    /* Scanlines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9997;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.06) 2px,
+        rgba(0,0,0,0.06) 4px
+      );
+    }
+
+    /* ============================================================
+       BOOT SCREEN / ACCESS GATE
+    ============================================================ */
+    #boot-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background: var(--black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    #boot-screen.dismissed {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .boot-log {
+      width: min(640px, 90vw);
+      font-size: 0.78rem;
+      color: var(--ghost);
+      letter-spacing: 0.04em;
+    }
+
+    .boot-line {
+      display: block;
+      opacity: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 1px solid transparent;
+    }
+
+    .boot-line.visible {
+      opacity: 1;
+    }
+
+    .boot-line.typing {
+      border-right-color: var(--accent);
+      animation: blink-cursor 0.6s step-end infinite;
+    }
+
+    @keyframes blink-cursor {
+      0%, 100% { border-right-color: var(--accent); }
+      50%       { border-right-color: transparent; }
+    }
+
+    .boot-line .ok   { color: var(--accent-hot); }
+    .boot-line .warn { color: var(--gold); }
+    .boot-line .err  { color: var(--danger); }
+    .boot-line .dim  { color: var(--dim); }
+
+    .boot-separator {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2rem 0;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .boot-separator.visible { opacity: 1; }
+
+    #proceed-btn {
+      margin-top: 2.5rem;
+      opacity: 0;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--silver);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      padding: 0.8rem 2.4rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: border-color 0.3s, color 0.3s, background 0.3s;
+      position: relative;
+    }
+
+    #proceed-btn::before,
+    #proceed-btn::after {
+      content: '';
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-color: var(--accent);
+      border-style: solid;
+      transition: all 0.3s ease;
+    }
+
+    #proceed-btn::before {
+      top: -1px; left: -1px;
+      border-width: 1px 0 0 1px;
+    }
+
+    #proceed-btn::after {
+      bottom: -1px; right: -1px;
+      border-width: 0 1px 1px 0;
+    }
+
+    #proceed-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(160,160,255,0.04);
+    }
+
+    #proceed-btn.visible {
+      opacity: 1;
+      animation: fadeInUp 0.6s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       MAIN LAYOUT
+    ============================================================ */
+    #main-content {
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+
+    #main-content.visible { opacity: 1; }
+
+    /* ============================================================
+       HEADER / NAV
+    ============================================================ */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border-soft);
+      background: rgba(2,2,4,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .header-inner {
+      max-width: var(--col-max);
+      margin: 0 auto;
+      padding: 0 var(--gutter);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    .wordmark {
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      font-weight: 500;
+      color: var(--white);
+      text-decoration: none;
+      text-transform: uppercase;
+      position: relative;
+    }
+
+    .wordmark::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 0;
+      height: 1px;
+      background: var(--accent);
+      transition: width 0.4s ease;
+    }
+
+    .wordmark:hover::after { width: 100%; }
+
+    .header-status {
+      font-size: 0.6rem;
+      color: var(--ghost);
+      letter-spacing: 0.12em;
+    }
+
+    .header-status .dot {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      background: var(--accent-hot);
+      border-radius: 50%;
+      margin-right: 0.5rem;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.3; transform: scale(0.7); }
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .nav-link {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      color: var(--ghost);
+      text-decoration: none;
+      text-transform: uppercase;
+      padding: 0.4rem 1rem;
+      border-left: 1px solid var(--border-soft);
+      transition: color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .nav-link:first-child { border-left: none; }
+
+    .nav-link:hover {
+      color: var(--silver);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .nav-link[data-locked]::after {
+      content: '⌇';
+      margin-left: 0.4rem;
+      color: var(--gold-dim);
+      font-size: 0.55rem;
+    }
+
+    /* ============================================================
+       HERO
+    ============================================================ */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 120px var(--gutter) 80px;
+      max-width: var(--col-max);
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4rem;
+      align-items: end;
+      width: 100%;
+    }
+
+    .hero-left {}
+
+    .hero-prefix {
+      font-size: 0.6rem;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .hero-prefix::before {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 1px;
+      background: var(--muted);
+    }
+
+    .hero-title {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: clamp(3rem, 8vw, 7rem);
+      line-height: 0.92;
+      color: var(--white);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.2em;
+      position: relative;
+    }
+
+    .hero-title .m-prefix {
+      font-family: var(--font-mono);
+      font-weight: 100;
+      font-style: normal;
+      font-size: 0.5em;
+      letter-spacing: 0.1em;
+      color: var(--ghost);
+      display: block;
+      margin-bottom: 0.3em;
+    }
+
+    /* Glitch on title */
+    .hero-title .glitch {
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero-title .glitch::before,
+    .hero-title .glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      font-family: inherit;
+      font-weight: inherit;
+      font-style: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    .hero-title .glitch::before {
+      color: var(--accent-hot);
+      animation: glitch-before 8s infinite;
+      clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+    }
+
+    .hero-title .glitch::after {
+      color: var(--gold);
+      animation: glitch-after 8s infinite;
+      clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+    }
+
+    @keyframes glitch-before {
+      0%, 90%, 100%   { transform: translate(0); opacity: 0; }
+      91%              { transform: translate(-3px, 1px); opacity: 0.7; }
+      92%              { transform: translate(3px, -1px); opacity: 0.7; }
+      93%              { transform: translate(0); opacity: 0; }
+      96%              { transform: translate(-2px, 0); opacity: 0.5; }
+      97%              { transform: translate(0); opacity: 0; }
+    }
+
+    @keyframes glitch-after {
+      0%, 90%, 100%   { transform: translate(0); opacity: 0; }
+      91%              { transform: translate(3px, 2px); opacity: 0.6; }
+      92%              { transform: translate(-2px, -1px); opacity: 0.6; }
+      93%              { transform: translate(0); opacity: 0; }
+    }
+
+    .hero-subtitle {
+      font-size: 0.72rem;
+      color: var(--ghost);
+      letter-spacing: 0.06em;
+      margin-top: 2rem;
+      max-width: 480px;
+      line-height: 1.9;
+    }
+
+    .hero-subtitle em {
+      font-style: normal;
+      color: var(--ash);
+    }
+
+    .hero-cta-row {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      margin-top: 3.5rem;
+    }
+
+    .btn-primary {
+      background: none;
+      border: 1px solid var(--silver);
+      color: var(--white);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      padding: 0.9rem 2rem;
+      text-decoration: none;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .btn-primary::before,
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary::before {
+      top: -1px; left: -1px;
+      border-top: 1px solid var(--accent);
+      border-left: 1px solid var(--accent);
+    }
+
+    .btn-primary::after {
+      bottom: -1px; right: -1px;
+      border-bottom: 1px solid var(--accent);
+      border-right: 1px solid var(--accent);
+    }
+
+    .btn-primary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(160,160,255,0.04);
+      letter-spacing: 0.26em;
+    }
+
+    .btn-ghost {
+      font-size: 0.6rem;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+      padding-bottom: 2px;
+      border-bottom: 1px solid var(--border);
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .btn-ghost:hover {
+      color: var(--ghost);
+      border-color: var(--ghost);
+    }
+
+    /* Right column: data panel */
+    .hero-panel {
+      width: 220px;
+      border: 1px solid var(--border-soft);
+      padding: 1.6rem;
+      font-size: 0.58rem;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      position: relative;
+      background: rgba(13,13,18,0.6);
+    }
+
+    .hero-panel::before {
+      content: 'SYS_STATUS';
+      position: absolute;
+      top: -0.55em;
+      left: 1rem;
+      background: var(--black);
+      padding: 0 0.5rem;
+      color: var(--muted);
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+    }
+
+    .panel-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid var(--border-soft);
+      gap: 1rem;
+    }
+
+    .panel-row:last-child { border-bottom: none; }
+
+    .panel-label { color: var(--muted); }
+    .panel-val   { color: var(--ash); text-align: right; }
+    .panel-val.live { color: var(--accent-hot); }
+    .panel-val.locked { color: var(--gold-dim); }
+
+    /* ============================================================
+       SECTION COMMONS
+    ============================================================ */
+    section {
+      max-width: var(--col-max);
+      margin: 0 auto;
+      padding: 6rem var(--gutter);
+      position: relative;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 1.5rem;
+      margin-bottom: 3.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .section-code {
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: 1.6rem;
+      color: var(--bone);
+      letter-spacing: 0.01em;
+    }
+
+    .section-rule {
+      flex: 1;
+      height: 1px;
+      background: var(--border-soft);
+    }
+
+    /* ============================================================
+       ARCHIVE FILES (FILE_001 etc.)
+    ============================================================ */
+    .archive-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1px;
+      background: var(--border-soft);
+      border: 1px solid var(--border-soft);
+    }
+
+    .archive-item {
+      background: var(--void);
+      padding: 2.2rem;
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s ease;
+      cursor: pointer;
+    }
+
+    .archive-item::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(160,160,255,0.03) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .archive-item:hover { background: var(--surface); }
+    .archive-item:hover::before { opacity: 1; }
+
+    .archive-item.locked {
+      cursor: not-allowed;
+    }
+
+    .archive-item.locked:hover { background: var(--void); }
+    .archive-item.locked:hover::before { opacity: 0; }
+
+    .file-tag {
+      font-size: 0.55rem;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .file-tag .status-badge {
+      font-size: 0.5rem;
+      padding: 0.2rem 0.5rem;
+      border: 1px solid;
+      letter-spacing: 0.15em;
+    }
+
+    .status-badge.active {
+      color: var(--accent-hot);
+      border-color: rgba(160,160,255,0.3);
+    }
+
+    .status-badge.restricted {
+      color: var(--gold);
+      border-color: rgba(200,169,110,0.3);
+    }
+
+    .status-badge.classified {
+      color: var(--danger);
+      border-color: rgba(255,68,68,0.3);
+    }
+
+    .file-name {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: 1.3rem;
+      color: var(--bone);
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .file-desc {
+      font-size: 0.62rem;
+      color: var(--ghost);
+      line-height: 1.8;
+      margin-bottom: 1.8rem;
+    }
+
+    .file-meta {
+      font-size: 0.55rem;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .file-meta span { display: flex; justify-content: space-between; }
+    .file-meta .val { color: var(--muted); }
+
+    .file-access-bar {
+      margin-top: 1.6rem;
+      height: 1px;
+      background: var(--border-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .archive-item:not(.locked) .file-access-bar::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, var(--accent-hot), transparent);
+      animation: scan-line 4s linear infinite;
+    }
+
+    @keyframes scan-line {
+      0%   { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    .lock-overlay {
+      position: absolute;
+      bottom: 1.4rem;
+      right: 1.6rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      color: var(--gold-dim);
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       THE VAULT SECTION
+    ============================================================ */
+    .vault-section {
+      border-top: 1px solid var(--border-soft);
+      border-bottom: 1px solid var(--border-soft);
+      background: var(--void);
+      padding: 6rem var(--gutter);
+    }
+
+    .vault-inner {
+      max-width: var(--col-max);
+      margin: 0 auto;
+    }
+
+    .vault-terminal {
+      border: 1px solid var(--border);
+      max-width: 620px;
+      background: var(--black);
+      position: relative;
+    }
+
+    .vault-terminal::before {
+      content: 'SECURE VAULT — AUTHENTICATION REQUIRED';
+      display: block;
+      background: var(--border-soft);
+      padding: 0.6rem 1.2rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .vault-body {
+      padding: 2.4rem;
+    }
+
+    .vault-desc {
+      font-size: 0.63rem;
+      color: var(--ghost);
+      line-height: 1.9;
+      margin-bottom: 2.5rem;
+    }
+
+    .vault-desc strong {
+      color: var(--ash);
+      font-weight: 400;
+    }
+
+    .vault-input-group {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      transition: border-color 0.3s ease;
+    }
+
+    .vault-input-group:focus-within {
+      border-color: var(--accent);
+    }
+
+    .vault-input-group.error {
+      border-color: var(--danger);
+      animation: shake 0.4s ease;
+    }
+
+    .vault-input-group.success {
+      border-color: var(--accent-hot);
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-6px); }
+      40%       { transform: translateX(6px); }
+      60%       { transform: translateX(-4px); }
+      80%       { transform: translateX(4px); }
+    }
+
+    .vault-prefix {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 0 1rem;
+      font-size: 0.6rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    #vault-key {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--white);
+      padding: 0.9rem 1rem;
+      text-transform: uppercase;
+    }
+
+    #vault-key::placeholder {
+      color: var(--dim);
+      letter-spacing: 0.1em;
+    }
+
+    #vault-submit {
+      background: none;
+      border: none;
+      border-left: 1px solid var(--border);
+      padding: 0 1.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.18em;
+      color: var(--ghost);
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    #vault-submit:hover {
+      color: var(--accent);
+      background: rgba(160,160,255,0.05);
+    }
+
+    #vault-response {
+      margin-top: 1rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      min-height: 1.4em;
+      transition: color 0.3s;
+    }
+
+    #vault-response.err  { color: var(--danger); }
+    #vault-response.ok   { color: var(--accent-hot); }
+
+    .vault-hint {
+      margin-top: 2rem;
+      padding-top: 1.6rem;
+      border-top: 1px solid var(--border-soft);
+      font-size: 0.55rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      line-height: 2;
+    }
+
+    .vault-hint .clue {
+      color: var(--gold-dim);
+      border-bottom: 1px dashed var(--gold-dim);
+      cursor: help;
+    }
+
+    /* ============================================================
+       MANIFESTO STRIP
+    ============================================================ */
+    .manifesto-strip {
+      border-top: 1px solid var(--border-soft);
+      overflow: hidden;
+      background: var(--void);
+    }
+
+    .manifesto-ticker {
+      display: flex;
+      gap: 0;
+      animation: ticker 40s linear infinite;
+      white-space: nowrap;
+      padding: 1rem 0;
+    }
+
+    .manifesto-ticker:hover { animation-play-state: paused; }
+
+    .ticker-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 2rem;
+      padding: 0 3rem;
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .ticker-item::after {
+      content: '◆';
+      color: var(--border);
+      font-size: 0.4rem;
+    }
+
+    @keyframes ticker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      border-top: 1px solid var(--border-soft);
+      padding: 2.5rem var(--gutter);
+      max-width: var(--col-max);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-left {
+      font-size: 0.55rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      line-height: 2;
+    }
+
+    .footer-right {
+      font-size: 0.55rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      text-align: right;
+      line-height: 2;
+    }
+
+    /* ============================================================
+       VAULT UNLOCKED PANEL
+    ============================================================ */
+    #vault-content {
+      display: none;
+      margin-top: 2rem;
+      border: 1px solid rgba(160,160,255,0.2);
+      padding: 2rem;
+      background: rgba(160,160,255,0.02);
+    }
+
+    #vault-content.visible { display: block; animation: fadeInUp 0.6s ease; }
+
+    .vault-doc-header {
+      font-size: 0.55rem;
+      letter-spacing: 0.25em;
+      color: var(--accent-hot);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+    }
+
+    .vault-doc-body {
+      font-size: 0.65rem;
+      color: var(--ash);
+      line-height: 2;
+    }
+
+    .vault-doc-body h3 {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: 1rem;
+      color: var(--bone);
+      margin-bottom: 0.8rem;
+    }
+
+    .vault-doc-body p { margin-bottom: 1em; }
+
+    /* ============================================================
+       GLITCH DISTORTION OVERLAY (occasional)
+    ============================================================ */
+    .glitch-distort {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 9996;
+      opacity: 0;
+    }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 768px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+      }
+
+      .hero-panel {
+        width: 100%;
+      }
+
+      .archive-grid {
+        grid-template-columns: 1fr;
+      }
+
+      nav { display: none; }
+
+      footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .footer-right { text-align: left; }
+    }
+
+    /* ============================================================
+       AUDIO PLAYER
+    ============================================================ */
+    .player-ui {
+      margin-top: 1.6rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .play-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--ghost);
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+      padding: 0.65rem 1.2rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      text-align: left;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      width: fit-content;
+    }
+
+    .play-btn:hover {
+      color: var(--accent);
+      border-color: rgba(160,160,255,0.4);
+      background: rgba(160,160,255,0.03);
+    }
+
+    .play-btn.playing {
+      color: var(--accent-hot);
+      border-color: rgba(160,160,255,0.5);
+    }
+
+    .play-icon { font-size: 0.5rem; }
+
+    .progress-wrap {
+      height: 1px;
+      background: var(--border);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent-hot);
+      width: 0%;
+      transition: width 0.1s linear;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      right: -3px;
+      top: -3px;
+      width: 7px;
+      height: 7px;
+      background: var(--accent);
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .progress-wrap:hover .progress-bar::after { opacity: 1; }
+
+    .time-display {
+      font-size: 0.52rem;
+      color: var(--dim);
+      letter-spacing: 0.12em;
+    }
+
+    /* ============================================================
+       SCROLLBAR
+    ============================================================ */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: var(--black); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       BOOT SCREEN
+  ============================================================ -->
+  <div id="boot-screen">
+    <div class="boot-log" id="boot-log" aria-live="polite"></div>
+    <hr class="boot-separator" id="boot-sep" />
+    <button id="proceed-btn" aria-label="Proceed to archive">PROCEED TO ARCHIVE</button>
+  </div>
+
+  <!-- ============================================================
+       GLITCH OVERLAY
+  ============================================================ -->
+  <div class="glitch-distort" id="glitch-distort"></div>
+
+  <!-- ============================================================
+       MAIN CONTENT
+  ============================================================ -->
+  <div id="main-content">
+
+    <!-- HEADER -->
+    <header>
+      <div class="header-inner">
+        <a href="#" class="wordmark">M. CENOTAPH</a>
+        <div class="header-status">
+          <span class="dot"></span>ARCHIVE ONLINE — ACCESS LEVEL: CONDITIONAL
+        </div>
+        <nav aria-label="Archive navigation">
+          <a href="#archive" class="nav-link">FILE_001</a>
+          <a href="#archive" class="nav-link">EVIDENCE_A</a>
+          <a href="#vault"   class="nav-link" data-locked>THE VAULT</a>
+          <a href="#archive" class="nav-link" data-locked>ARCHIVE_LOG</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-grid">
+        <div class="hero-left">
+          <p class="hero-prefix">ARCHIVE RECOVERED — 2024</p>
+
+          <h1 class="hero-title" id="hero-title">
+            <span class="m-prefix">M.</span>
+            <span class="glitch" data-text="CENOTAPH">CENOTAPH</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            A monument with no body beneath it.<br/>
+            <em>The subject designated M.</em> did not vanish. The subject
+            transformed the condition of loss into a structured sonic and
+            architectural practice. What follows is not music. It is forensic evidence
+            of a survival that refused to be legible.
+          </p>
+
+          <div class="hero-cta-row">
+            <a href="#archive" class="btn-primary">
+              <span>ACCESS ARCHIVE</span>
+              <span>→</span>
+            </a>
+            <a href="#vault" class="btn-ghost">Request Vault Authorization</a>
+          </div>
+        </div>
+
+        <div class="hero-panel" role="complementary" aria-label="System status">
+          <div class="panel-row">
+            <span class="panel-label">STATUS</span>
+            <span class="panel-val live">ACTIVE</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">FILES RECOVERED</span>
+            <span class="panel-val">03 / 12</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">ACCESS LEVEL</span>
+            <span class="panel-val">CONDITIONAL</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">VAULT</span>
+            <span class="panel-val locked">LOCKED</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">BPM</span>
+            <span class="panel-val">182</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">SYSTEM INTEGRITY</span>
+            <span class="panel-val">74.3%</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">LAST BREACH</span>
+            <span class="panel-val">—</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">ARCHIVE ORIGIN</span>
+            <span class="panel-val">CLASSIFIED</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MANIFESTO TICKER -->
+    <div class="manifesto-strip" aria-hidden="true">
+      <div class="manifesto-ticker" id="ticker">
+        <!-- Items duplicated for seamless loop -->
+        <span class="ticker-item">No body beneath the monument</span>
+        <span class="ticker-item">Grief without remains is infinite architecture</span>
+        <span class="ticker-item">182 BPM — the resting heart rate of controlled collapse</span>
+        <span class="ticker-item">Luxury is the precise language of suppression</span>
+        <span class="ticker-item">The archive does not welcome. It authorizes.</span>
+        <span class="ticker-item">Vacuum. Descent. Reconstruction.</span>
+        <span class="ticker-item">No body beneath the monument</span>
+        <span class="ticker-item">Grief without remains is infinite architecture</span>
+        <span class="ticker-item">182 BPM — the resting heart rate of controlled collapse</span>
+        <span class="ticker-item">Luxury is the precise language of suppression</span>
+        <span class="ticker-item">The archive does not welcome. It authorizes.</span>
+        <span class="ticker-item">Vacuum. Descent. Reconstruction.</span>
+      </div>
+    </div>
+
+    <!-- ARCHIVE FILES -->
+    <section id="archive" aria-labelledby="archive-heading">
+      <div class="section-header">
+        <span class="section-code">SECTION_01</span>
+        <h2 class="section-title" id="archive-heading">Recovered Files</h2>
+        <div class="section-rule"></div>
+        <span class="section-code">03 DOCUMENTS</span>
+      </div>
+
+      <div class="archive-grid">
+
+        <!-- FILE_001 — CORRUPTED -->
+        <article class="archive-item locked" tabindex="0" aria-label="File 001: Vacuum Sealed — Corrupted">
+          <div class="file-tag">
+            <span>FILE_001</span>
+            <span class="status-badge classified">CORRUPTED</span>
+          </div>
+          <h3 class="file-name" style="color: var(--ghost);">Vacuum Sealed</h3>
+          <p class="file-desc">
+            First document in the sequence. Recovery attempted — audio data irretrievably
+            fragmented during archive extraction. Structural metadata preserved.
+            Content: inaccessible. The subject's neurological signature under conditions
+            of controlled compression. Duration: unknown. Format: Orchestral Liquid DnB, 182 BPM.
+          </p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val" style="color:var(--danger)">FAILED</span></span>
+            <span><span>INTEGRITY</span><span class="val" style="color:var(--danger)">0.0%</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">DATA LOSS — UNRECOVERABLE</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay" aria-hidden="true" style="color:var(--danger); border-color:rgba(255,68,68,0.3)">⌇ CORRUPTED</span>
+        </article>
+
+        <!-- EVIDENCE_A — ACTIVE WITH PLAYER -->
+        <article class="archive-item" aria-label="Evidence A: Sweet Descent">
+          <div class="file-tag">
+            <span>EVIDENCE_A</span>
+            <span class="status-badge active">AVAILABLE</span>
+          </div>
+          <h3 class="file-name">Sweet Descent</h3>
+          <p class="file-desc">
+            Secondary artifact. Documents the phenomenology of voluntary yielding
+            under conditions of aesthetic saturation. The subject explores luxury as
+            a pharmacological mechanism — hospitality as anaesthetic, surrender as
+            a precision instrument.
+          </p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">2024.03.17</span></span>
+            <span><span>INTEGRITY</span><span class="val">96.7%</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">PUBLIC — LEVEL 0</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+
+          <!-- AUDIO PLAYER -->
+          <audio id="player-evidence-a" preload="metadata" src="MCenotaph_SWEET_DESCENT.mp3"></audio>
+
+          <div class="player-ui" id="player-ui-a">
+            <button class="play-btn" id="play-btn-a" onclick="togglePlay()" aria-label="Play Sweet Descent">
+              <span id="play-icon-a">▶</span>&nbsp; PLAY EVIDENCE_A
+            </button>
+            <div class="progress-wrap" id="progress-wrap-a" onclick="seekAudio(event)">
+              <div class="progress-bar" id="progress-bar-a"></div>
+            </div>
+            <span class="time-display" id="time-a">00:00</span>
+          </div>
+        </article>
+
+        <!-- ARCHIVE_LOG -->
+        <article class="archive-item locked" tabindex="0" aria-label="Archive Log: Architect of Void — Classified">
+          <div class="file-tag">
+            <span>ARCHIVE_LOG</span>
+            <span class="status-badge classified">CLASSIFIED</span>
+          </div>
+          <h3 class="file-name">Architect of Void</h3>
+          <p class="file-desc">
+            Terminal document in the first sequence. Describes not reconstruction
+            but the deliberate engineering of structure from the condition of emptiness.
+            The subject does not rebuild from ruins. The subject claims the ruins as
+            the only legitimate foundation. Vault authorization required.
+          </p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val">CORRUPTED</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">VAULT — LEVEL 3</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay" aria-hidden="true">⌇ LOCKED</span>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- THE VAULT -->
+    <div class="vault-section" id="vault">
+      <div class="vault-inner">
+        <div class="section-header">
+          <span class="section-code">SECTION_02</span>
+          <h2 class="section-title">The Vault</h2>
+          <div class="section-rule"></div>
+          <span class="section-code">AUTH REQUIRED</span>
+        </div>
+
+        <div class="vault-terminal" role="form" aria-label="Vault authentication terminal">
+          <div class="vault-body">
+            <p class="vault-desc">
+              <strong>Authorization Protocol:</strong> The vault operates on a key distribution
+              system external to this interface. The subject has embedded access credentials
+              within publicly available artifacts — lyrical metadata, image EXIF data, and
+              frequency annotations in released audio files.<br/><br/>
+              Authorized personnel are already in possession of the key.
+              If you are not in possession, you are not yet authorized.
+            </p>
+
+            <div class="vault-input-group" id="vault-input-group">
+              <span class="vault-prefix">KEY://</span>
+              <input
+                type="password"
+                id="vault-key"
+                placeholder="INSERT AUTHORIZATION KEY"
+                autocomplete="off"
+                spellcheck="false"
+                maxlength="32"
+                aria-label="Vault authorization key"
+              />
+              <button id="vault-submit" type="button" aria-label="Submit key">SUBMIT</button>
+            </div>
+            <p id="vault-response" aria-live="polite"></p>
+
+            <div class="vault-hint">
+              <span>AUTHORIZATION PROTOCOL — </span>
+              <span class="clue" title="The subject did not scream. The subject counted.">
+                The subject did not scream. The subject counted.
+              </span>
+              <br/><br/>
+              <span style="color:var(--dim); font-size:0.58rem; line-height:2;">
+                Find the moment in EVIDENCE_A where the orchestra holds its breath for exactly four beats.<br/>
+                The word the silence is named after is your key.<br/><br/>
+                It is not written anywhere.<br/>
+                It is the condition the music was composed inside.
+              </span>
+            </div>
+
+            <!-- Vault content (unlocked state) -->
+            <div id="vault-content" aria-live="polite">
+              <div class="vault-doc-header">
+                ▸ VAULT DOCUMENT — CLEARANCE GRANTED — LEVEL 3
+              </div>
+              <div class="vault-doc-body">
+                <h3>On the Neuroscience of Service: A Classified Appendix</h3>
+                <p>
+                  The subject designated M. operated for an extended period within
+                  luxury hospitality environments at the level of Chef de Rang —
+                  a position engineered for hypervigilance. The neurological
+                  architecture required for five-star service is identical,
+                  in measurable terms, to post-traumatic stress response:
+                  heightened amygdala activity, compressed threat assessment cycles,
+                  anticipatory pattern recognition calibrated to 300ms windows.
+                </p>
+                <p>
+                  The subject did not escape this architecture. The subject weaponized it.
+                  M. CENOTAPH is the conversion of a surveillance mechanism into a
+                  compositional instrument. The music at 182 BPM is not arbitrary —
+                  it is the precise mean resting heart rate recorded during service
+                  in a 47-cover restaurant operating at full occupancy.
+                </p>
+                <p>
+                  The monument contains no body because the body did not die.
+                  It mutated. What you are accessing is the documentation of that mutation.
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      <div class="footer-left">
+        M. CENOTAPH — DIGITAL NECROPOLIS<br/>
+        Archive Status: PARTIAL RECOVERY<br/>
+        © The Estate of M. — All Rights Withheld
+      </div>
+      <div class="footer-right">
+        This archive is not public property.<br/>
+        Your access has been logged.<br/>
+        <span style="color: var(--dim)">Session ID: <span id="session-id"></span></span>
+      </div>
+    </footer>
+
+  </div><!-- /main-content -->
+
+  <!-- ============================================================
+       JAVASCRIPT
+  ============================================================ -->
+  <script>
+    'use strict';
+
+    /* ── Utilities ───────────────────────────────────────────── */
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+    const qs    = sel => document.querySelector(sel);
+    const rand  = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+
+    /* ── Session ID ──────────────────────────────────────────── */
+    const sessionId = [...Array(16)].map(() =>
+      Math.floor(Math.random() * 16).toString(16)).join('').toUpperCase();
+    qs('#session-id').textContent = sessionId;
+
+    /* ── Boot Sequence ───────────────────────────────────────── */
+    const bootLog  = qs('#boot-log');
+    const bootSep  = qs('#boot-sep');
+    const procBtn  = qs('#proceed-btn');
+
+    const bootLines = [
+      { text: '> INITIALIZING RECOVERY SYSTEM v2.4.1',        delay: 300  },
+      { text: '> INTEGRITY CHECK......................', delay: 800  },
+      { text: '> ARCHIVE CORRUPTION DETECTED', delay: 400  },
+      { text: '> ATTEMPTING PARTIAL RECONSTRUCTION...',        delay: 600  },
+      { text: '> FILE_001 [Vacuum Sealed]........<span class="err">CORRUPTED</span>',            delay: 400  },
+      { text: '> EVIDENCE_A [Sweet Descent]......<span class="ok">RECOVERED</span>',            delay: 400  },
+      { text: '> ARCHIVE_LOG [Architect of Void]..<span class="warn">CLASSIFIED</span>',          delay: 500  },
+      { text: '> VAULT STATUS: SEALED',                        delay: 400  },
+      { text: '> BIOMETRIC CLEARANCE: NOT REQUIRED',          delay: 300  },
+      { text: '> ACCESS LEVEL ASSIGNED: CONDITIONAL',         delay: 300  },
+      { text: '<span class="dim">────────────────────────────────────────────────────</span>',  delay: 400  },
+      { text: '> WARNING: You are not invited. You are authorized.',  delay: 200  },
+      { text: '> Proceed only if you understand the distinction.',    delay: 200  },
+    ];
+
+    async function runBoot() {
+      for (const item of bootLines) {
+        await delay(item.delay);
+        const line = document.createElement('span');
+        line.className = 'boot-line';
+        line.innerHTML = item.text;
+        bootLog.appendChild(line);
+        line.classList.add('visible');
+      }
+
+      await delay(400);
+      bootSep.classList.add('visible');
+
+      await delay(300);
+      procBtn.classList.add('visible');
+    }
+
+    runBoot();
+
+    procBtn.addEventListener('click', async () => {
+      qs('#boot-screen').classList.add('dismissed');
+      await delay(400);
+      qs('#main-content').classList.add('visible');
+    });
+
+    /* ── Random Glitch Distortion ────────────────────────────── */
+    const glitchEl = qs('#glitch-distort');
+
+    async function triggerGlitch() {
+      glitchEl.style.cssText = `
+        opacity: 1;
+        background: linear-gradient(
+          ${rand(0,360)}deg,
+          transparent ${rand(0,40)}%,
+          rgba(160,160,255,0.03) ${rand(40,60)}%,
+          transparent ${rand(60,100)}%
+        );
+        transform: translateY(${rand(-3,3)}px) scaleX(${0.998 + Math.random()*0.004});
+      `;
+      await delay(rand(50, 150));
+      glitchEl.style.opacity = '0';
+    }
+
+    setInterval(() => {
+      if (Math.random() < 0.3) triggerGlitch();
+    }, 4000);
+
+    /* ── Vault Auth ───────────────────────────────────────────── */
+    const VAULT_KEY  = 'ASPHYXIA'; // hidden in lyric metadata
+    const inputGroup = qs('#vault-input-group');
+    const vaultInput = qs('#vault-key');
+    const vaultResp  = qs('#vault-response');
+    const vaultCont  = qs('#vault-content');
+    const submitBtn  = qs('#vault-submit');
+
+    let attempts = 0;
+
+    async function handleVaultSubmit() {
+      const val = vaultInput.value.trim().toUpperCase();
+
+      if (val === '') {
+        vaultResp.className = 'err';
+        vaultResp.textContent = '> ERROR: No input detected.';
+        return;
+      }
+
+      attempts++;
+
+      if (val === VAULT_KEY) {
+        inputGroup.classList.add('success');
+        vaultResp.className = 'ok';
+        vaultResp.textContent = '> CLEARANCE GRANTED — DECRYPTING ARCHIVE_LOG...';
+        await delay(1200);
+        vaultResp.textContent = '> ACCESS CONFIRMED. SESSION LOGGED.';
+        vaultInput.disabled = true;
+        submitBtn.disabled = true;
+        vaultCont.classList.add('visible');
+      } else {
+        inputGroup.classList.add('error');
+        vaultResp.className = 'err';
+
+        const msgs = [
+          '> AUTHORIZATION FAILED. This incident has been logged.',
+          '> INCORRECT KEY. The archive does not negotiate.',
+          '> ACCESS DENIED. Return when you are ready.',
+          `> ATTEMPT ${attempts}: You are not authorized. The key is embedded in the work.`,
+          '> SYSTEM NOTE: Repeated failure will not unlock persistence. Only the correct key will.',
+        ];
+
+        vaultResp.textContent = msgs[Math.min(attempts - 1, msgs.length - 1)];
+
+        setTimeout(() => inputGroup.classList.remove('error'), 500);
+      }
+    }
+
+    submitBtn.addEventListener('click', handleVaultSubmit);
+    vaultInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleVaultSubmit();
+    });
+
+    /* ── Intersection Observer: subtle entrance animations ──── */
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity  = '1';
+          entry.target.style.transform = 'translateY(0)';
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.archive-item').forEach((el, i) => {
+      el.style.cssText = `opacity: 0; transform: translateY(20px); transition: opacity 0.7s ease ${i * 0.15}s, transform 0.7s ease ${i * 0.15}s;`;
+      observer.observe(el);
+    });
+
+    /* ── Audio Player — EVIDENCE_A ──────────────────────────── */
+    const _audio       = document.getElementById('player-evidence-a');
+    const _playBtn     = document.getElementById('play-btn-a');
+    const _playIcon    = document.getElementById('play-icon-a');
+    const _progressBar = document.getElementById('progress-bar-a');
+    const _progressWrap= document.getElementById('progress-wrap-a');
+    const _timeDisplay = document.getElementById('time-a');
+
+    function fmt(s) {
+      if (isNaN(s)) return '00:00';
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+    }
+
+    function togglePlay() {
+      if (!_audio) return;
+      if (_audio.paused) {
+        _audio.play().then(() => {
+          _playIcon.textContent = '■';
+          _playBtn.classList.add('playing');
+        }).catch(err => {
+          console.error('Playback failed:', err);
+        });
+      } else {
+        _audio.pause();
+        _playIcon.textContent = '▶';
+        _playBtn.classList.remove('playing');
+      }
+    }
+
+    function seekAudio(e) {
+      if (!_audio || !_audio.duration) return;
+      const rect = _progressWrap.getBoundingClientRect();
+      const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      _audio.currentTime = pct * _audio.duration;
+    }
+
+    if (_audio) {
+      _audio.addEventListener('timeupdate', () => {
+        if (!_audio.duration) return;
+        const pct = (_audio.currentTime / _audio.duration) * 100;
+        _progressBar.style.width = pct + '%';
+        _timeDisplay.textContent = fmt(_audio.currentTime) + ' / ' + fmt(_audio.duration);
+      });
+
+      _audio.addEventListener('ended', () => {
+        _playIcon.textContent = '▶';
+        _playBtn.classList.remove('playing');
+        _progressBar.style.width = '0%';
+        _timeDisplay.textContent = '00:00';
+      });
+    }
+
+  </script>
+</body>
+</html>
