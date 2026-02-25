@@ -1294,7 +1294,7 @@
         </article>
 
         <!-- EVIDENCE_A — ACTIVE WITH PLAYER -->
-        <article class="archive-item" tabindex="0" aria-label="Evidence A: Sweet Descent">
+        <article class="archive-item" aria-label="Evidence A: Sweet Descent">
           <div class="file-tag">
             <span>EVIDENCE_A</span>
             <span class="status-badge active">AVAILABLE</span>
@@ -1622,7 +1622,8 @@
     }
 
     if (audio && playBtn) {
-      playBtn.addEventListener('click', () => {
+      playBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (audio.paused) {
           audio.play().catch(() => {});
           playBtn.innerHTML = '<span class="play-icon">■</span> PAUSE EVIDENCE_A';
@@ -1650,6 +1651,7 @@
       });
 
       progressWrap.addEventListener('click', e => {
+        e.stopPropagation();
         if (!audio.duration) return;
         const rect = progressWrap.getBoundingClientRect();
         const pct  = (e.clientX - rect.left) / rect.width;
