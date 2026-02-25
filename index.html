@@ -1138,7 +1138,183 @@
         .archive-item.has-player .player-ui * {
           pointer-events: all;
         }
-    ::-webkit-scrollbar { width: 3px; }
+    /* ============================================================
+       EPIGRAFE PAGE
+    ============================================================ */
+    #epigrafe-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 8000;
+      background: var(--black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: var(--gutter);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 1.2s ease, visibility 1.2s ease;
+    }
+
+    #epigrafe-screen.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #epigrafe-screen.dismissed {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .epigrafe-inner {
+      width: min(640px, 92vw);
+      display: flex;
+      flex-direction: column;
+      gap: 3rem;
+    }
+
+    .epigrafe-label {
+      font-size: 0.55rem;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .epigrafe-label::before {
+      content: '';
+      display: block;
+      width: 30px;
+      height: 1px;
+      background: var(--muted);
+    }
+
+    .epigrafe-text {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: clamp(0.85rem, 2.2vw, 1.05rem);
+      color: var(--bone);
+      line-height: 2.2;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 1.4s ease 0.6s, transform 1.4s ease 0.6s;
+    }
+
+    #epigrafe-screen.active .epigrafe-text {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .epigrafe-text .stage {
+      display: block;
+      font-family: var(--font-mono);
+      font-style: normal;
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      margin-top: 1.8rem;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+    }
+
+    .epigrafe-text .spoken {
+      color: var(--white);
+      font-style: italic;
+    }
+
+    .epigrafe-text .whisper {
+      color: var(--ghost);
+      font-size: 0.9em;
+    }
+
+    .epigrafe-text .emphasis {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    /* Audio player minimal */
+    .epigrafe-player {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      opacity: 0;
+      transition: opacity 0.8s ease 2s;
+    }
+
+    #epigrafe-screen.active .epigrafe-player {
+      opacity: 1;
+    }
+
+    .epigrafe-play-btn {
+      background: none;
+      border: none;
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 0;
+      text-align: left;
+      transition: color 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .epigrafe-play-btn:hover { color: var(--silver); }
+    .epigrafe-play-btn.playing { color: var(--accent-hot); }
+
+    .epigrafe-progress {
+      height: 1px;
+      background: var(--border);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .epigrafe-progress-bar {
+      height: 100%;
+      background: var(--ghost);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .epigrafe-time {
+      font-size: 0.5rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+    }
+
+    /* Proceed button — delayed appearance */
+    #epigrafe-proceed {
+      opacity: 0;
+      background: none;
+      border: none;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.25em;
+      color: var(--ghost);
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 0;
+      margin-top: 1rem;
+      align-self: flex-end;
+      transition: color 0.3s, opacity 0.8s ease;
+      pointer-events: none;
+    }
+
+    #epigrafe-proceed.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #epigrafe-proceed:hover { color: var(--silver); }
+
+    /* Scrollbar */
     ::-webkit-scrollbar-track { background: var(--black); }
     ::-webkit-scrollbar-thumb { background: var(--border); }
     ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
@@ -1153,7 +1329,71 @@
   <div id="boot-screen">
     <div class="boot-log" id="boot-log" aria-live="polite"></div>
     <hr class="boot-separator" id="boot-sep" />
-    <button id="proceed-btn" aria-label="Proceed to archive">PROCEED TO ARCHIVE</button>
+    <button id="proceed-btn" aria-label="Proceed to epigrafe">ENTER THE ARCHIVE</button>
+  </div>
+
+  <!-- ============================================================
+       EPIGRAFE SCREEN
+  ============================================================ -->
+  <div id="epigrafe-screen" aria-label="Epigrafe — M. Cenotaph">
+    <div class="epigrafe-inner">
+
+      <p class="epigrafe-label">CENOTAPH — INTRO / EPIGRAFE</p>
+
+      <div class="epigrafe-text">
+
+        <span class="stage">// SOUND OF A VACUUM SEAL BREAKING</span>
+        <span class="stage">// MASSIVE ECHOING FOOTSTEPS ON MARBLE</span>
+        <span class="stage">// DEEP SUB-BASS PULSE — 182 BPM</span>
+
+        <span class="stage" style="margin-top:2.4rem;">[ SPOKEN ]</span>
+        <span class="spoken">
+          Look at the scale of it, yeah?<br/>
+          Proper massive.<br/>
+          But look closer, bruv... there's no one in the box.<br/>
+          I built the vault, I polished the stone, I set the table...<br/>
+          But the subject? The subject's gone.<br/>
+          Just the architecture left. Just the pressure.<br/>
+          It's a cenotaph, innit?<br/>
+          Empty on the inside, heavy on the out.<br/>
+          <span class="emphasis">Five-star silence.</span>
+        </span>
+
+        <span class="stage" style="margin-top:2.4rem;">[ BRIDGE — ORCHESTRAL STRINGS, 182 BPM ]</span>
+        <span class="spoken">
+          You're standing in the middle of my ghost.<br/>
+          Don't breathe too loud.<br/>
+          The walls have ears, and the floor...<br/>
+          The floor is made of everything I lost.
+        </span>
+
+        <span class="stage" style="margin-top:2.4rem;">[ OUTRO ]</span>
+        <span class="spoken whisper">
+          Welcome to the nothing.<br/>
+          Authorization confirmed.
+        </span>
+        <span class="stage">// SOUND OF A HEAVY STONE DOOR SEALING — BOOM</span>
+
+      </div>
+
+      <!-- Placeholder player — sostituisci src quando hai il file -->
+      <audio id="epigrafe-audio" preload="metadata" src="MCenotaph_CENOTAPH_INTRO.mp3"></audio>
+
+      <div class="epigrafe-player">
+        <button class="epigrafe-play-btn" id="epigrafe-play-btn" onclick="toggleEpigrafe()">
+          <span id="epigrafe-icon">▶</span> PLAY INTRO — MCenotaph: Cenotaph
+        </button>
+        <div class="epigrafe-progress" id="epigrafe-progress" onclick="seekEpigrafe(event)">
+          <div class="epigrafe-progress-bar" id="epigrafe-progress-bar"></div>
+        </div>
+        <span class="epigrafe-time" id="epigrafe-time">00:00</span>
+
+        <button id="epigrafe-proceed">
+          PROCEED TO ARCHIVE &nbsp;→
+        </button>
+      </div>
+
+    </div>
   </div>
 
   <!-- ============================================================
@@ -1309,8 +1549,7 @@
           <p class="file-desc">
             Secondary artifact. Documents the phenomenology of voluntary yielding
             under conditions of aesthetic saturation. The subject explores luxury as
-            a pharmacological mechanism — hospitality as anaesthetic, surrender as
-            a precision instrument.
+            a pharmacological mechanism — surrender as a precision instrument.
           </p>
           <div class="file-meta">
             <span><span>RECOVERED</span><span class="val">2024.03.17</span></span>
@@ -1517,7 +1756,21 @@
 
     procBtn.addEventListener('click', async () => {
       qs('#boot-screen').classList.add('dismissed');
-      await delay(400);
+      await delay(600);
+      qs('#epigrafe-screen').classList.add('active');
+      // Show proceed button after 12 seconds
+      setTimeout(() => {
+        const ep = qs('#epigrafe-proceed');
+        if (ep) ep.classList.add('visible');
+      }, 12000);
+    });
+
+    qs('#epigrafe-proceed').addEventListener('click', async () => {
+      // Stop audio if playing
+      const ea = qs('#epigrafe-audio');
+      if (ea && !ea.paused) ea.pause();
+      qs('#epigrafe-screen').classList.add('dismissed');
+      await delay(600);
       qs('#main-content').classList.add('visible');
     });
 
@@ -1611,6 +1864,52 @@
       el.style.cssText = `opacity: 0; transform: translateY(20px); transition: opacity 0.7s ease ${i * 0.15}s, transform 0.7s ease ${i * 0.15}s;`;
       observer.observe(el);
     });
+
+    /* ── Epigrafe Audio Player ───────────────────────────────── */
+    const _eAudio    = document.getElementById('epigrafe-audio');
+    const _eIcon     = document.getElementById('epigrafe-icon');
+    const _ePlayBtn  = document.getElementById('epigrafe-play-btn');
+    const _eBar      = document.getElementById('epigrafe-progress-bar');
+    const _eProgress = document.getElementById('epigrafe-progress');
+    const _eTime     = document.getElementById('epigrafe-time');
+    const _eProceed  = document.getElementById('epigrafe-proceed');
+
+    function toggleEpigrafe() {
+      if (!_eAudio) return;
+      if (_eAudio.paused) {
+        _eAudio.play().then(() => {
+          _eIcon.textContent = '■';
+          _ePlayBtn.classList.add('playing');
+        }).catch(err => console.error(err));
+      } else {
+        _eAudio.pause();
+        _eIcon.textContent = '▶';
+        _ePlayBtn.classList.remove('playing');
+      }
+    }
+
+    function seekEpigrafe(e) {
+      if (!_eAudio || !_eAudio.duration) return;
+      const rect = _eProgress.getBoundingClientRect();
+      const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      _eAudio.currentTime = pct * _eAudio.duration;
+    }
+
+    if (_eAudio) {
+      _eAudio.addEventListener('timeupdate', () => {
+        if (!_eAudio.duration) return;
+        const pct = (_eAudio.currentTime / _eAudio.duration) * 100;
+        _eBar.style.width = pct + '%';
+        _eTime.textContent = fmt(_eAudio.currentTime) + ' / ' + fmt(_eAudio.duration);
+      });
+
+      // When track ends — show proceed button immediately
+      _eAudio.addEventListener('ended', () => {
+        _eIcon.textContent = '▶';
+        _ePlayBtn.classList.remove('playing');
+        if (_eProceed) _eProceed.classList.add('visible');
+      });
+    }
 
     /* ── Audio Player — EVIDENCE_A ──────────────────────────── */
     const _audio       = document.getElementById('player-evidence-a');
