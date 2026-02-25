@@ -1314,15 +1314,13 @@
           <div class="file-access-bar"></div>
 
           <!-- AUDIO PLAYER -->
-          <audio id="audio-evidence-a" preload="none">
-            <source src="MCenotaph_SWEET_DESCENT.mp3" type="audio/mpeg" />
-          </audio>
+          <audio id="player-evidence-a" preload="metadata" src="MCenotaph_SWEET_DESCENT.mp3"></audio>
 
           <div class="player-ui" id="player-ui-a">
-            <button class="play-btn" id="play-btn-a" aria-label="Play Sweet Descent">
-              <span class="play-icon">▶</span> PLAY EVIDENCE_A
+            <button class="play-btn" id="play-btn-a" onclick="togglePlay()" aria-label="Play Sweet Descent">
+              <span id="play-icon-a">▶</span>&nbsp; PLAY EVIDENCE_A
             </button>
-            <div class="progress-wrap" id="progress-wrap-a" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-wrap" id="progress-wrap-a" onclick="seekAudio(event)">
               <div class="progress-bar" id="progress-bar-a"></div>
             </div>
             <span class="time-display" id="time-a">00:00</span>
@@ -1609,53 +1607,56 @@
     });
 
     /* ── Audio Player — EVIDENCE_A ──────────────────────────── */
-    const audio      = qs('#player-evidence-a');
-    const playBtn    = qs('#play-btn-a');
-    const progressWrap = qs('#progress-wrap-a');
-    const progressBar  = qs('#progress-bar-a');
-    const timeDisplay  = qs('#time-a');
+    const _audio       = document.getElementById('player-evidence-a');
+    const _playBtn     = document.getElementById('play-btn-a');
+    const _playIcon    = document.getElementById('play-icon-a');
+    const _progressBar = document.getElementById('progress-bar-a');
+    const _progressWrap= document.getElementById('progress-wrap-a');
+    const _timeDisplay = document.getElementById('time-a');
 
-    function formatTime(s) {
+    function fmt(s) {
+      if (isNaN(s)) return '00:00';
       const m = Math.floor(s / 60);
       const sec = Math.floor(s % 60);
-      return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+      return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
     }
 
-    if (audio && playBtn) {
-      playBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (audio.paused) {
-          audio.play().catch(() => {});
-          playBtn.innerHTML = '<span class="play-icon">■</span> PAUSE EVIDENCE_A';
-          playBtn.classList.add('playing');
-        } else {
-          audio.pause();
-          playBtn.innerHTML = '<span class="play-icon">▶</span> PLAY EVIDENCE_A';
-          playBtn.classList.remove('playing');
-        }
+    function togglePlay() {
+      if (!_audio) return;
+      if (_audio.paused) {
+        _audio.play().then(() => {
+          _playIcon.textContent = '■';
+          _playBtn.classList.add('playing');
+        }).catch(err => {
+          console.error('Playback failed:', err);
+        });
+      } else {
+        _audio.pause();
+        _playIcon.textContent = '▶';
+        _playBtn.classList.remove('playing');
+      }
+    }
+
+    function seekAudio(e) {
+      if (!_audio || !_audio.duration) return;
+      const rect = _progressWrap.getBoundingClientRect();
+      const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      _audio.currentTime = pct * _audio.duration;
+    }
+
+    if (_audio) {
+      _audio.addEventListener('timeupdate', () => {
+        if (!_audio.duration) return;
+        const pct = (_audio.currentTime / _audio.duration) * 100;
+        _progressBar.style.width = pct + '%';
+        _timeDisplay.textContent = fmt(_audio.currentTime) + ' / ' + fmt(_audio.duration);
       });
 
-      audio.addEventListener('timeupdate', () => {
-        if (!audio.duration) return;
-        const pct = (audio.currentTime / audio.duration) * 100;
-        progressBar.style.width = pct + '%';
-        progressWrap.setAttribute('aria-valuenow', Math.round(pct));
-        timeDisplay.textContent = formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
-      });
-
-      audio.addEventListener('ended', () => {
-        playBtn.innerHTML = '<span class="play-icon">▶</span> PLAY EVIDENCE_A';
-        playBtn.classList.remove('playing');
-        progressBar.style.width = '0%';
-        timeDisplay.textContent = '00:00';
-      });
-
-      progressWrap.addEventListener('click', e => {
-        e.stopPropagation();
-        if (!audio.duration) return;
-        const rect = progressWrap.getBoundingClientRect();
-        const pct  = (e.clientX - rect.left) / rect.width;
-        audio.currentTime = pct * audio.duration;
+      _audio.addEventListener('ended', () => {
+        _playIcon.textContent = '▶';
+        _playBtn.classList.remove('playing');
+        _progressBar.style.width = '0%';
+        _timeDisplay.textContent = '00:00';
       });
     }
 
