@@ -1,0 +1,3519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>M. CENOTAPH — AUTHORIZED ACCESS TERMINAL</title>
+  <meta name="description" content="Digital archive. Restricted access. Proceed with authorization." />
+  <meta property="og:title" content="M. CENOTAPH" />
+  <meta property="og:description" content="Archive Status: RECOVERED. Access Level: CONDITIONAL." />
+  <meta property="og:image" content="og-preview.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=IBM+Plex+Serif:ital,wght@0,200;0,300;1,200;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       TOKENS & RESET
+    ============================================================ */
+    :root {
+      --black:       #020204;
+      --void:        #07070b;
+      --surface:     #0d0d14;
+      --border:      #26263a;
+      --border-soft: #1c1c2a;
+      --dim:         #58587a;
+      --muted:       #7878a0;
+      --ghost:       #9898c0;
+      --ash:         #bcbcd8;
+      --silver:      #d8d8f0;
+      --bone:        #eaeaf8;
+      --white:       #f4f4fc;
+      --accent:      #c8c8ff;
+      --accent-hot:  #a0a0ff;
+      --danger:      #ff5555;
+      --gold:        #d4b46e;
+      --gold-dim:    #9a7840;
+
+      --font-mono:   'IBM Plex Mono', 'Courier New', monospace;
+      --font-serif:  'IBM Plex Serif', Georgia, serif;
+
+      --gutter: clamp(1.5rem, 5vw, 4rem);
+      --col-max: 1100px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 14px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--black);
+      color: var(--silver);
+      font-family: var(--font-mono);
+      font-weight: 300;
+      line-height: 1.7;
+      overflow-x: hidden;
+      cursor: crosshair;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: var(--black);
+    }
+
+    /* ============================================================
+       NOISE OVERLAY
+    ============================================================ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      background-size: 128px 128px;
+      opacity: 0.028;
+      mix-blend-mode: overlay;
+      animation: noiseShift 0.15s steps(2) infinite;
+    }
+
+    @keyframes noiseShift {
+      0%   { background-position: 0 0; }
+      25%  { background-position: 30px -15px; }
+      50%  { background-position: -20px 10px; }
+      75%  { background-position: 15px 25px; }
+      100% { background-position: 0 0; }
+    }
+
+    /* Scanlines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9997;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.06) 2px,
+        rgba(0,0,0,0.06) 4px
+      );
+    }
+
+    /* ============================================================
+       BOOT SCREEN / ACCESS GATE
+    ============================================================ */
+    #boot-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background: var(--black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    #boot-screen.dismissed {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .boot-log {
+      width: min(640px, 90vw);
+      font-size: 0.78rem;
+      color: var(--ghost);
+      letter-spacing: 0.04em;
+    }
+
+    .boot-line {
+      display: block;
+      opacity: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 1px solid transparent;
+    }
+
+    .boot-line.visible {
+      opacity: 1;
+    }
+
+    .boot-line.typing {
+      border-right-color: var(--accent);
+      animation: blink-cursor 0.6s step-end infinite;
+    }
+
+    @keyframes blink-cursor {
+      0%, 100% { border-right-color: var(--accent); }
+      50%       { border-right-color: transparent; }
+    }
+
+    .boot-line .ok   { color: var(--accent-hot); }
+    .boot-line .warn { color: var(--gold); }
+    .boot-line .err  { color: var(--danger); }
+    .boot-line .dim  { color: var(--dim); }
+
+    .boot-separator {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2rem 0;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .boot-separator.visible { opacity: 1; }
+
+    #proceed-btn {
+      margin-top: 2.5rem;
+      opacity: 0;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--silver);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      padding: 0.8rem 2.4rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: border-color 0.3s, color 0.3s, background 0.3s;
+      position: relative;
+    }
+
+    #proceed-btn::before,
+    #proceed-btn::after {
+      content: '';
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-color: var(--accent);
+      border-style: solid;
+      transition: all 0.3s ease;
+    }
+
+    #proceed-btn::before {
+      top: -1px; left: -1px;
+      border-width: 1px 0 0 1px;
+    }
+
+    #proceed-btn::after {
+      bottom: -1px; right: -1px;
+      border-width: 0 1px 1px 0;
+    }
+
+    #proceed-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(160,160,255,0.04);
+    }
+
+    #proceed-btn.visible {
+      opacity: 1;
+      animation: fadeInUp 0.6s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ============================================================
+       MAIN LAYOUT
+    ============================================================ */
+    #main-content {
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+
+    #main-content.visible { opacity: 1; }
+
+    /* ============================================================
+       HEADER / NAV
+    ============================================================ */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border-soft);
+      background: rgba(2,2,4,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .header-inner {
+      max-width: var(--col-max);
+      margin: 0 auto;
+      padding: 0 var(--gutter);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    .wordmark {
+      font-size: 0.72rem;
+      letter-spacing: 0.28em;
+      font-weight: 500;
+      color: var(--white);
+      text-decoration: none;
+      text-transform: uppercase;
+      position: relative;
+    }
+
+    .wordmark::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 0;
+      height: 1px;
+      background: var(--accent);
+      transition: width 0.4s ease;
+    }
+
+    .wordmark:hover::after { width: 100%; }
+
+    .header-status {
+      font-size: 0.6rem;
+      color: var(--ghost);
+      letter-spacing: 0.12em;
+    }
+
+    .header-status .dot {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      background: var(--accent-hot);
+      border-radius: 50%;
+      margin-right: 0.5rem;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.3; transform: scale(0.7); }
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .nav-link {
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      color: var(--ghost);
+      text-decoration: none;
+      text-transform: uppercase;
+      padding: 0.4rem 1rem;
+      border-left: 1px solid var(--border-soft);
+      transition: color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .nav-link:first-child { border-left: none; }
+
+    .nav-link:hover {
+      color: var(--silver);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .nav-link[data-locked]::after {
+      content: '⌇';
+      margin-left: 0.4rem;
+      color: var(--gold-dim);
+      font-size: 0.55rem;
+    }
+
+    /* ============================================================
+       HERO
+    ============================================================ */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 120px var(--gutter) 80px;
+      max-width: var(--col-max);
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 4rem;
+      align-items: end;
+      width: 100%;
+    }
+
+    .hero-left {}
+
+    .hero-prefix {
+      font-size: 0.6rem;
+      letter-spacing: 0.3em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .hero-prefix::before {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 1px;
+      background: var(--muted);
+    }
+
+    .hero-title {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: clamp(3rem, 8vw, 7rem);
+      line-height: 0.92;
+      color: var(--white);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.2em;
+      position: relative;
+    }
+
+    .hero-title .m-prefix {
+      font-family: var(--font-mono);
+      font-weight: 100;
+      font-style: normal;
+      font-size: 0.5em;
+      letter-spacing: 0.1em;
+      color: var(--ghost);
+      display: block;
+      margin-bottom: 0.3em;
+    }
+
+    /* Glitch on title */
+    .hero-title .glitch {
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero-title .glitch::before,
+    .hero-title .glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      font-family: inherit;
+      font-weight: inherit;
+      font-style: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
+
+    .hero-title .glitch::before {
+      color: var(--accent-hot);
+      animation: glitch-before 8s infinite;
+      clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+    }
+
+    .hero-title .glitch::after {
+      color: var(--gold);
+      animation: glitch-after 8s infinite;
+      clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+    }
+
+    @keyframes glitch-before {
+      0%, 90%, 100%   { transform: translate(0); opacity: 0; }
+      91%              { transform: translate(-3px, 1px); opacity: 0.7; }
+      92%              { transform: translate(3px, -1px); opacity: 0.7; }
+      93%              { transform: translate(0); opacity: 0; }
+      96%              { transform: translate(-2px, 0); opacity: 0.5; }
+      97%              { transform: translate(0); opacity: 0; }
+    }
+
+    @keyframes glitch-after {
+      0%, 90%, 100%   { transform: translate(0); opacity: 0; }
+      91%              { transform: translate(3px, 2px); opacity: 0.6; }
+      92%              { transform: translate(-2px, -1px); opacity: 0.6; }
+      93%              { transform: translate(0); opacity: 0; }
+    }
+
+    .hero-subtitle {
+      font-size: 0.72rem;
+      color: var(--ghost);
+      letter-spacing: 0.06em;
+      margin-top: 2rem;
+      max-width: 480px;
+      line-height: 1.9;
+    }
+
+    .hero-subtitle em {
+      font-style: normal;
+      color: var(--ash);
+    }
+
+    .hero-cta-row {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      margin-top: 3.5rem;
+    }
+
+    .btn-primary {
+      background: none;
+      border: 1px solid var(--silver);
+      color: var(--white);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      padding: 0.9rem 2rem;
+      text-decoration: none;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .btn-primary::before,
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary::before {
+      top: -1px; left: -1px;
+      border-top: 1px solid var(--accent);
+      border-left: 1px solid var(--accent);
+    }
+
+    .btn-primary::after {
+      bottom: -1px; right: -1px;
+      border-bottom: 1px solid var(--accent);
+      border-right: 1px solid var(--accent);
+    }
+
+    .btn-primary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(160,160,255,0.04);
+      letter-spacing: 0.26em;
+    }
+
+    .btn-ghost {
+      font-size: 0.6rem;
+      letter-spacing: 0.18em;
+      color: var(--muted);
+      text-decoration: none;
+      text-transform: uppercase;
+      padding-bottom: 2px;
+      border-bottom: 1px solid var(--border);
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .btn-ghost:hover {
+      color: var(--ghost);
+      border-color: var(--ghost);
+    }
+
+    /* Right column: data panel */
+    .hero-panel {
+      width: 220px;
+      border: 1px solid var(--border-soft);
+      padding: 1.6rem;
+      font-size: 0.58rem;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      position: relative;
+      background: rgba(13,13,18,0.6);
+    }
+
+    .hero-panel::before {
+      content: 'SYS_STATUS';
+      position: absolute;
+      top: -0.55em;
+      left: 1rem;
+      background: var(--black);
+      padding: 0 0.5rem;
+      color: var(--muted);
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+    }
+
+    .panel-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid var(--border-soft);
+      gap: 1rem;
+    }
+
+    .panel-row:last-child { border-bottom: none; }
+
+    .panel-label { color: var(--muted); }
+    .panel-val   { color: var(--ash); text-align: right; }
+    .panel-val.live { color: var(--accent-hot); }
+    .panel-val.locked { color: var(--gold-dim); }
+
+    /* ============================================================
+       SECTION COMMONS
+    ============================================================ */
+    section {
+      max-width: var(--col-max);
+      margin: 0 auto;
+      padding: 6rem var(--gutter);
+      position: relative;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 1.5rem;
+      margin-bottom: 3.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .section-code {
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: 1.6rem;
+      color: var(--bone);
+      letter-spacing: 0.01em;
+    }
+
+    .section-rule {
+      flex: 1;
+      height: 1px;
+      background: var(--border-soft);
+    }
+
+    /* ============================================================
+       ARCHIVE FILES (FILE_001 etc.)
+    ============================================================ */
+    .archive-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1px;
+      background: var(--border-soft);
+      border: 1px solid var(--border-soft);
+    }
+
+    .archive-item {
+      background: var(--void);
+      padding: 2.2rem;
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s ease;
+      cursor: pointer;
+    }
+
+    .archive-item::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(160,160,255,0.03) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .archive-item:hover { background: var(--surface); }
+    .archive-item:hover::before { opacity: 1; }
+
+    .archive-item.locked {
+      cursor: not-allowed;
+    }
+
+    .archive-item.locked:hover { background: var(--void); }
+    .archive-item.locked:hover::before { opacity: 0; }
+
+    .file-tag {
+      font-size: 0.55rem;
+      letter-spacing: 0.25em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .file-tag .status-badge {
+      font-size: 0.5rem;
+      padding: 0.2rem 0.5rem;
+      border: 1px solid;
+      letter-spacing: 0.15em;
+    }
+
+    .status-badge.active {
+      color: var(--accent-hot);
+      border-color: rgba(160,160,255,0.3);
+    }
+
+    .status-badge.restricted {
+      color: var(--gold);
+      border-color: rgba(200,169,110,0.3);
+    }
+
+    .status-badge.classified {
+      color: var(--danger);
+      border-color: rgba(255,68,68,0.3);
+    }
+
+    .file-name {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: 1.3rem;
+      color: var(--bone);
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .file-desc {
+      font-size: 0.62rem;
+      color: var(--ghost);
+      line-height: 1.8;
+      margin-bottom: 1.8rem;
+    }
+
+    .file-meta {
+      font-size: 0.55rem;
+      color: var(--dim);
+      letter-spacing: 0.08em;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .file-meta span { display: flex; justify-content: space-between; }
+    .file-meta .val { color: var(--muted); }
+
+    .file-access-bar {
+      margin-top: 1.6rem;
+      height: 1px;
+      background: var(--border-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .archive-item:not(.locked) .file-access-bar::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, var(--accent-hot), transparent);
+      animation: scan-line 4s linear infinite;
+    }
+
+    @keyframes scan-line {
+      0%   { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    .lock-overlay {
+      position: absolute;
+      bottom: 1.4rem;
+      right: 1.6rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      color: var(--gold-dim);
+      text-transform: uppercase;
+    }
+
+    /* ============================================================
+       THE VAULT SECTION
+    ============================================================ */
+    .vault-section {
+      border-top: 1px solid var(--border-soft);
+      border-bottom: 1px solid var(--border-soft);
+      background: var(--void);
+      padding: 6rem var(--gutter);
+    }
+
+    .vault-inner {
+      max-width: var(--col-max);
+      margin: 0 auto;
+    }
+
+    .vault-terminal {
+      border: 1px solid var(--border);
+      max-width: 620px;
+      background: var(--black);
+      position: relative;
+    }
+
+    .vault-terminal::before {
+      content: 'SECURE VAULT — AUTHENTICATION REQUIRED';
+      display: block;
+      background: var(--border-soft);
+      padding: 0.6rem 1.2rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .vault-body {
+      padding: 2.4rem;
+    }
+
+    .vault-desc {
+      font-size: 0.63rem;
+      color: var(--ghost);
+      line-height: 1.9;
+      margin-bottom: 2.5rem;
+    }
+
+    .vault-desc strong {
+      color: var(--ash);
+      font-weight: 400;
+    }
+
+    .vault-input-group {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      transition: border-color 0.3s ease;
+    }
+
+    .vault-input-group:focus-within {
+      border-color: var(--accent);
+    }
+
+    .vault-input-group.error {
+      border-color: var(--danger);
+      animation: shake 0.4s ease;
+    }
+
+    .vault-input-group.success {
+      border-color: var(--accent-hot);
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-6px); }
+      40%       { transform: translateX(6px); }
+      60%       { transform: translateX(-4px); }
+      80%       { transform: translateX(4px); }
+    }
+
+    .vault-prefix {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 0 1rem;
+      font-size: 0.6rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    #vault-key {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--white);
+      padding: 0.9rem 1rem;
+      text-transform: uppercase;
+    }
+
+    #vault-key::placeholder {
+      color: var(--dim);
+      letter-spacing: 0.1em;
+    }
+
+    #vault-submit {
+      background: none;
+      border: none;
+      border-left: 1px solid var(--border);
+      padding: 0 1.4rem;
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.18em;
+      color: var(--ghost);
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    #vault-submit:hover {
+      color: var(--accent);
+      background: rgba(160,160,255,0.05);
+    }
+
+    #vault-response {
+      margin-top: 1rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      min-height: 1.4em;
+      transition: color 0.3s;
+    }
+
+    #vault-response.err  { color: var(--danger); }
+    #vault-response.ok   { color: var(--accent-hot); }
+
+    .vault-hint {
+      margin-top: 2rem;
+      padding-top: 1.6rem;
+      border-top: 1px solid var(--border-soft);
+      font-size: 0.55rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      line-height: 2;
+    }
+
+    .vault-hint .clue {
+      color: var(--gold-dim);
+      border-bottom: 1px dashed var(--gold-dim);
+      cursor: help;
+    }
+
+    /* ============================================================
+       MANIFESTO STRIP
+    ============================================================ */
+    .manifesto-strip {
+      border-top: 1px solid var(--border-soft);
+      overflow: hidden;
+      background: var(--void);
+    }
+
+    .manifesto-ticker {
+      display: flex;
+      gap: 0;
+      animation: ticker 40s linear infinite;
+      white-space: nowrap;
+      padding: 1rem 0;
+    }
+
+    .manifesto-ticker:hover { animation-play-state: paused; }
+
+    .ticker-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 2rem;
+      padding: 0 3rem;
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .ticker-item::after {
+      content: '◆';
+      color: var(--border);
+      font-size: 0.4rem;
+    }
+
+    @keyframes ticker {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      border-top: 1px solid var(--border-soft);
+      padding: 2.5rem var(--gutter);
+      max-width: var(--col-max);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-left {
+      font-size: 0.55rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      line-height: 2;
+    }
+
+    .footer-right {
+      font-size: 0.55rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      text-align: right;
+      line-height: 2;
+    }
+
+    /* ============================================================
+       VAULT UNLOCKED PANEL
+    ============================================================ */
+    #vault-content {
+      display: none;
+      margin-top: 2rem;
+      border: 1px solid rgba(160,160,255,0.2);
+      padding: 2rem;
+      background: rgba(160,160,255,0.02);
+    }
+
+    #vault-content.visible { display: block; animation: fadeInUp 0.6s ease; }
+
+    .vault-doc-header {
+      font-size: 0.55rem;
+      letter-spacing: 0.25em;
+      color: var(--accent-hot);
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+    }
+
+    .vault-doc-body {
+      font-size: 0.65rem;
+      color: var(--ash);
+      line-height: 2;
+    }
+
+    .vault-doc-body h3 {
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: 1rem;
+      color: var(--bone);
+      margin-bottom: 0.8rem;
+    }
+
+    .vault-doc-body p { margin-bottom: 1em; }
+
+    /* ============================================================
+       GLITCH DISTORTION OVERLAY (occasional)
+    ============================================================ */
+    .glitch-distort {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 9996;
+      opacity: 0;
+    }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 768px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 2.5rem;
+      }
+
+      .hero-panel {
+        width: 100%;
+      }
+
+      .archive-grid {
+        grid-template-columns: 1fr;
+      }
+
+      nav { display: none; }
+
+      footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .footer-right { text-align: left; }
+    }
+
+    /* ============================================================
+       AUDIO PLAYER
+    ============================================================ */
+    .player-ui {
+      margin-top: 1.6rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .play-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--ghost);
+      font-family: var(--font-mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+      padding: 0.65rem 1.2rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      text-align: left;
+      transition: color 0.2s, border-color 0.2s, background 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      width: fit-content;
+    }
+
+    .play-btn:hover {
+      color: var(--accent);
+      border-color: rgba(160,160,255,0.4);
+      background: rgba(160,160,255,0.03);
+    }
+
+    .play-btn.playing {
+      color: var(--accent-hot);
+      border-color: rgba(160,160,255,0.5);
+    }
+
+    .play-icon { font-size: 0.5rem; }
+
+    .progress-wrap {
+      height: 1px;
+      background: var(--border);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent-hot);
+      width: 0%;
+      transition: width 0.1s linear;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      right: -3px;
+      top: -3px;
+      width: 7px;
+      height: 7px;
+      background: var(--accent);
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .progress-wrap:hover .progress-bar::after { opacity: 1; }
+
+    .time-display {
+      font-size: 0.52rem;
+      color: var(--dim);
+      letter-spacing: 0.12em;
+    }
+
+        /* Card con player — card non intercetta click, tutto dentro sì */
+        .archive-item.has-player {
+          pointer-events: none;
+          cursor: default;
+        }
+
+        .archive-item.has-player > *,
+        .archive-item.has-player .player-ui,
+        .archive-item.has-player .player-ui *,
+        .archive-item.has-player .play-btn,
+        .archive-item.has-player .progress-wrap,
+        .archive-item.has-player button,
+        .archive-item.has-player a {
+          pointer-events: all;
+        }
+    /* ============================================================
+       SYSTEM INTEGRITY BAR — fixed top strip
+    ============================================================ */
+    #integrity-bar-wrap {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 9999;
+      height: 3px;
+      background: var(--border-soft);
+    }
+
+    #integrity-bar-fill {
+      height: 100%;
+      width: 16.6%; /* 2/12 default */
+      background: var(--danger);
+      transition: width 1.2s cubic-bezier(.4,0,.2,1), background 1.2s ease;
+    }
+
+    /* colour shifts: red → gold → accent */
+    #integrity-bar-fill.mid  { background: var(--gold); }
+    #integrity-bar-fill.high { background: var(--accent-hot); }
+    #integrity-bar-fill.full { background: #ffd700; box-shadow: 0 0 12px rgba(255,215,0,0.6); }
+
+    /* push header down by 3px */
+    header { top: 3px !important; }
+
+    /* ============================================================
+       NEURO-LINK SCREEN
+    ============================================================ */
+    #neuro-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 8000;
+      background: var(--black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 1s ease, visibility 1s ease;
+      overflow-y: auto;
+      padding: 2rem var(--gutter);
+    }
+
+    #neuro-screen.active  { opacity: 1; visibility: visible; }
+    #neuro-screen.dismissed { opacity: 0; visibility: hidden; pointer-events: none; }
+
+    .neuro-inner {
+      width: min(520px, 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .neuro-header {
+      font-size: 0.72rem;
+      letter-spacing: 0.3em;
+      color: var(--silver);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .neuro-blink {
+      color: var(--accent);
+      animation: blink-cursor 0.6s step-end infinite;
+      font-size: 0.6rem;
+    }
+
+    .neuro-audio-req {
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      color: var(--ghost);
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.8s ease 0.5s;
+    }
+
+    #neuro-screen.active .neuro-audio-req { opacity: 1; }
+
+    .neuro-player {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      opacity: 0;
+      transition: opacity 0.8s ease 0.8s;
+    }
+
+    #neuro-screen.active .neuro-player { opacity: 1; }
+
+    .neuro-time-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .neuro-countdown {
+      font-size: 0.52rem;
+      letter-spacing: 0.12em;
+      color: var(--ghost);
+    }
+
+    .neuro-countdown.done { color: var(--accent-hot); }
+
+    /* Transmission progress bar */
+    .neuro-listen-wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .neuro-listen-label {
+      font-size: 0.52rem;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+    }
+
+    .neuro-listen-track {
+      height: 2px;
+      background: var(--border);
+      width: 100%;
+      position: relative;
+    }
+
+    .neuro-listen-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.5s linear, background 0.5s ease;
+      position: relative;
+    }
+
+    .neuro-listen-bar::after {
+      content: '';
+      position: absolute;
+      right: -4px; top: -3px;
+      width: 8px; height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .neuro-listen-bar.active::after { opacity: 1; }
+    .neuro-listen-bar.complete { background: var(--accent-hot); }
+
+    /* Bypass input */
+    .neuro-bypass {
+      width: 100%;
+      border-top: 1px solid var(--border-soft);
+      padding-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      opacity: 0;
+      transition: opacity 0.8s ease 2s;
+    }
+
+    #neuro-screen.active .neuro-bypass { opacity: 1; }
+
+    .neuro-bypass-label {
+      font-size: 0.5rem;
+      letter-spacing: 0.18em;
+      color: var(--dim);
+      text-align: center;
+    }
+
+    .neuro-bypass-row {
+      display: flex;
+      border: 1px solid var(--border);
+      transition: border-color 0.3s;
+    }
+
+    .neuro-bypass-row:focus-within { border-color: var(--accent); }
+
+    .neuro-bypass-prefix {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 0 1rem;
+      font-size: 0.6rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+      font-family: var(--font-mono);
+    }
+
+    #neuro-key {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--white);
+      padding: 0.7rem 1rem;
+      text-transform: uppercase;
+    }
+
+    #neuro-key::placeholder { color: var(--dim); }
+
+    #neuro-key-submit {
+      background: none;
+      border: none;
+      border-left: 1px solid var(--border);
+      padding: 0 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--ghost);
+      cursor: pointer;
+      transition: color 0.2s, background 0.2s;
+    }
+
+    #neuro-key-submit:hover { color: var(--accent); background: rgba(160,160,255,0.05); }
+
+    .neuro-bypass-resp {
+      font-size: 0.58rem;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      min-height: 1.2em;
+    }
+
+    .neuro-bypass-resp.ok  { color: var(--accent-hot); }
+    .neuro-bypass-resp.err { color: var(--danger); }
+
+    /* Proceed button */
+    #epigrafe-proceed {
+      opacity: 0;
+      pointer-events: none;
+      background: none;
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.25em;
+      color: var(--silver);
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 0.8rem 2.4rem;
+      transition: opacity 0.8s ease, color 0.3s, border-color 0.3s;
+      position: relative;
+    }
+
+    #epigrafe-proceed.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #epigrafe-proceed:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(160,160,255,0.04);
+    }
+
+    /* ============================================================
+       EPIGRAFE / NEURO SHARED PLAYER STYLES
+    ============================================================ */
+    .epigrafe-play-btn {
+      background: none;
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.2em;
+      color: var(--silver);
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 0.7rem 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      transition: color 0.3s, border-color 0.3s;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .epigrafe-play-btn:hover  { color: var(--white); border-color: var(--ghost); }
+    .epigrafe-play-btn.playing { color: var(--accent-hot); border-color: var(--accent-hot); }
+
+    .epigrafe-progress {
+      height: 1px;
+      background: var(--dim);
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .epigrafe-progress-bar {
+      height: 100%;
+      background: var(--silver);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .epigrafe-time {
+      font-size: 0.52rem;
+      color: var(--ghost);
+      letter-spacing: 0.12em;
+    }
+
+    /* Quote rotator */
+    .epigrafe-quotes {
+      width: min(480px, 100%);
+      text-align: center;
+      position: relative;
+      min-height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .epigrafe-quote {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-weight: 200;
+      font-style: italic;
+      font-size: clamp(0.9rem, 2.5vw, 1.2rem);
+      color: var(--white);
+      opacity: 0;
+      transition: opacity 1s ease;
+      pointer-events: none;
+    }
+
+    .epigrafe-quote.active { opacity: 1; }
+    .epigrafe-quote::before { content: '\201C'; margin-right: 0.15em; color: var(--ghost); }
+    .epigrafe-quote::after  { content: '\201D'; margin-left:  0.15em; color: var(--ghost); }
+
+    /* ============================================================
+       GOLD MODE — dramatic full palette shift
+    ============================================================ */
+    body.gold-mode {
+      --black:       #070500;
+      --void:        #0e0a00;
+      --surface:     #161100;
+      --border:      #3d3000;
+      --border-soft: #282000;
+      --dim:         #6e5800;
+      --muted:       #a08000;
+      --ghost:       #c8a200;
+      --ash:         #e2c040;
+      --silver:      #f0d870;
+      --bone:        #f8eba0;
+      --white:       #fff8cc;
+      --accent:      #ffd700;
+      --accent-hot:  #ffb300;
+      --gold:        #ffd700;
+      --gold-dim:    #c89800;
+      --danger:      #ff8c00;
+    }
+
+    body.gold-mode header {
+      background: rgba(7,5,0,0.96);
+      border-bottom: 1px solid rgba(255,215,0,0.12);
+    }
+
+    body.gold-mode .wordmark { color: #ffd700; }
+
+    body.gold-mode .archive-item {
+      border-color: rgba(255,215,0,0.07);
+    }
+    body.gold-mode .archive-item:not(.locked):hover {
+      background: var(--surface);
+      box-shadow: 0 0 40px rgba(255,215,0,0.05);
+    }
+
+    body.gold-mode .file-name   { color: var(--bone); }
+    body.gold-mode .section-title { color: #ffd700; }
+
+    body.gold-mode .vault-terminal,
+    body.gold-mode #minigame-terminal {
+      border-color: rgba(255,215,0,0.2);
+      background: rgba(14,10,0,0.6);
+    }
+
+    body.gold-mode .progress-bar { background: #ffd700; }
+    body.gold-mode .play-btn.playing { color: #ffd700; border-color: rgba(255,215,0,0.5); }
+    body.gold-mode .status-badge.active { color: #ffd700; border-color: rgba(255,215,0,0.3); }
+
+    body.gold-mode .file-access-bar::after {
+      background: linear-gradient(90deg, transparent, #ffd700, transparent);
+    }
+
+    body.gold-mode .hero-title .glitch::before { color: #ffd700; }
+    body.gold-mode .hero-title .glitch::after  { color: #fff8cc; }
+
+    body.gold-mode .manifesto-strip {
+      border-color: rgba(255,215,0,0.1);
+    }
+    body.gold-mode .ticker-item {
+      color: var(--ghost);
+    }
+
+    /* Pulsing gold radial glow from top */
+    body.gold-mode #main-content {
+      position: relative;
+    }
+    body.gold-mode #main-content::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; height: 40vh;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 50% -10%, rgba(255,215,0,0.06) 0%, transparent 70%);
+      z-index: 0;
+    }
+
+    body.gold-mode #integrity-bar-fill {
+      background: linear-gradient(90deg, #b87e00, #ffd700, #fffaaa, #ffd700, #b87e00);
+      background-size: 300% 100%;
+      animation: goldShimmer 2s linear infinite;
+      box-shadow: 0 0 10px rgba(255,215,0,0.6), 0 0 20px rgba(255,215,0,0.3);
+    }
+
+    @keyframes goldShimmer {
+      0%   { background-position: 0% 0; }
+      100% { background-position: 300% 0; }
+    }
+
+
+    /* ============================================================
+       MEMORY PROTOCOL MINIGAME
+    ============================================================ */
+    #minigame-section {
+      border-top: 1px solid var(--border-soft);
+      padding: 6rem var(--gutter);
+    }
+
+    #mg-hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.55rem;
+      letter-spacing: 0.2em;
+      margin-bottom: 1.4rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    #mg-level-display { color: var(--silver); }
+    #mg-phase-display { color: var(--accent); transition: color 0.4s; }
+    #mg-phase-display.recall  { color: var(--gold); }
+
+    #mg-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-width: 380px;
+      margin: 0 auto 1.4rem;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    @media (max-width: 500px) {
+      #mg-grid { max-width: 280px; gap: 6px; }
+    }
+
+    .mg-cell {
+      aspect-ratio: 1;
+      background: var(--void);
+      border: 1px solid var(--border);
+      cursor: default;
+      position: relative;
+      transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
+      -webkit-tap-highlight-color: transparent;
+      pointer-events: all;
+    }
+
+    .mg-cell.flash {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 18px rgba(160,160,255,0.55);
+      transform: scale(0.96);
+    }
+
+    .mg-cell.interactive { cursor: pointer; }
+    .mg-cell.interactive:hover  { background: rgba(160,160,255,0.07); border-color: var(--ghost); }
+    .mg-cell.interactive:active { transform: scale(0.94); }
+
+    .mg-cell.selected {
+      background: rgba(160,160,255,0.18);
+      border-color: var(--accent-hot);
+    }
+
+    .mg-cell.correct {
+      background: rgba(160,160,255,0.28);
+      border-color: var(--accent);
+      box-shadow: 0 0 12px rgba(160,160,255,0.3);
+    }
+
+    .mg-cell.wrong {
+      background: rgba(255,68,68,0.22);
+      border-color: var(--danger);
+      box-shadow: 0 0 12px rgba(255,68,68,0.25);
+    }
+
+    #mg-message {
+      font-size: 0.56rem;
+      letter-spacing: 0.15em;
+      color: var(--ghost);
+      text-align: center;
+      min-height: 1.6em;
+      margin-bottom: 1rem;
+      transition: color 0.3s;
+    }
+    #mg-message.ok   { color: var(--accent-hot); }
+    #mg-message.warn { color: var(--gold); }
+    #mg-message.fail { color: var(--danger); }
+
+    #minigame-win {
+      border-top: 1px solid var(--border-soft);
+      padding-top: 2rem;
+      margin-top: 1rem;
+      animation: fadeInUp 0.8s ease;
+    }
+
+    #mg-win-headline {
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      color: var(--accent-hot);
+      margin-bottom: 1.2rem;
+    }
+
+    #mg-win-quote {
+      font-family: var(--font-serif);
+      font-style: italic;
+      font-weight: 200;
+      font-size: clamp(1rem, 2.5vw, 1.35rem);
+      color: var(--white);
+      line-height: 1.6;
+      margin-bottom: 0.5rem;
+    }
+
+    #mg-win-sub {
+      font-size: 0.52rem;
+      letter-spacing: 0.18em;
+      color: var(--ghost);
+      margin-bottom: 1.6rem;
+    }
+
+    #mg-fail-headline {
+      font-size: 0.58rem;
+      letter-spacing: 0.25em;
+      color: var(--danger);
+      margin-bottom: 0.7rem;
+    }
+
+    #mg-fail-sub {
+      font-size: 0.56rem;
+      letter-spacing: 0.1em;
+      color: var(--ghost);
+      margin-bottom: 0;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar       { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--black); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  </style>
+</head>
+<body>
+
+  <!-- SYSTEM INTEGRITY BAR -->
+  <div id="integrity-bar-wrap" aria-hidden="true">
+    <div id="integrity-bar-fill"></div>
+  </div>
+
+  <!-- ============================================================
+       BOOT SCREEN
+  ============================================================ -->
+  <div id="boot-screen">
+    <div class="boot-log" id="boot-log" aria-live="polite"></div>
+    <hr class="boot-separator" id="boot-sep" />
+    <button id="proceed-btn" aria-label="Proceed">ENTER THE ARCHIVE</button>
+  </div>
+
+  <!-- ============================================================
+       NEURO-LINK SCREEN
+  ============================================================ -->
+  <div id="neuro-screen">
+    <audio id="epigrafe-audio" preload="metadata" src="MCenotaph_CENOTAPH_INTRO.mp3"></audio>
+    <div class="neuro-inner">
+      <div class="neuro-header">
+        <span id="neuro-status-text">SYNCING NEURO-LINK...</span>
+        <span class="neuro-blink">█</span>
+      </div>
+      <div class="neuro-audio-req" id="neuro-audio-req">[ AUDIO REQUIRED — INITIALIZING TRANSMISSION ]</div>
+      <div class="neuro-player">
+        <button class="epigrafe-play-btn" id="epigrafe-play-btn" onclick="toggleEpigrafe()">
+          <span id="epigrafe-icon">▶</span>&nbsp; PLAY INTRO — M. CENOTAPH
+        </button>
+        <div class="epigrafe-progress" id="epigrafe-progress" onclick="seekEpigrafe(event)">
+          <div class="epigrafe-progress-bar" id="epigrafe-progress-bar"></div>
+        </div>
+        <div class="neuro-time-row">
+          <span class="epigrafe-time" id="epigrafe-time">00:00</span>
+          <span class="neuro-countdown" id="neuro-countdown">69s required</span>
+        </div>
+      </div>
+      <div class="neuro-listen-wrap">
+        <div class="neuro-listen-label">TRANSMISSION PROGRESS</div>
+        <div class="neuro-listen-track">
+          <div class="neuro-listen-bar" id="neuro-listen-bar"></div>
+        </div>
+      </div>
+      <div class="neuro-bypass" id="neuro-bypass">
+        <div class="neuro-bypass-label">— OR INSERT AUTHORIZATION KEY TO BYPASS —</div>
+        <div class="neuro-bypass-row">
+          <span class="neuro-bypass-prefix">KEY://</span>
+          <input type="password" id="neuro-key" placeholder="AUTHORIZATION KEY" autocomplete="off" spellcheck="false" maxlength="32" />
+          <button id="neuro-key-submit">↵</button>
+        </div>
+        <p class="neuro-bypass-resp" id="neuro-bypass-resp"></p>
+      </div>
+      <button id="epigrafe-proceed">ACCESS GRANTED &nbsp;→</button>
+      <div class="epigrafe-quotes" aria-live="polite">
+        <span class="epigrafe-quote active" id="eq-0">Preserved. Fresh. Dead.</span>
+        <span class="epigrafe-quote" id="eq-1">Five-star silence.</span>
+        <span class="epigrafe-quote" id="eq-2">Empty on the inside, heavy on the out.</span>
+        <span class="epigrafe-quote" id="eq-3">Don't breathe too loud.</span>
+        <span class="epigrafe-quote" id="eq-4">And it feels expensive.</span>
+        <span class="epigrafe-quote" id="eq-5">No blood on the apron.</span>
+        <span class="epigrafe-quote" id="eq-6">The floor is made of everything I lost.</span>
+        <span class="epigrafe-quote" id="eq-7">Welcome to the nothing.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       GLITCH OVERLAY
+  ============================================================ -->
+  <div class="glitch-distort" id="glitch-distort"></div>
+
+  <!-- ============================================================
+       MAIN CONTENT
+  ============================================================ -->
+  <div id="main-content">
+
+    <!-- HEADER -->
+    <header>
+      <div class="header-inner">
+        <a href="#" class="wordmark">M. CENOTAPH</a>
+        <div class="header-status">
+          <span class="dot"></span>ARCHIVE ONLINE — ACCESS LEVEL: CONDITIONAL
+        </div>
+        <nav aria-label="Archive navigation">
+          <a href="#archive" class="nav-link">FILE_001</a>
+          <a href="#archive" class="nav-link">EVIDENCE_A</a>
+          <a href="#vault"   class="nav-link" data-locked>THE VAULT</a>
+          <a href="#archive" class="nav-link" data-locked>ARCHIVE_LOG</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-grid">
+        <div class="hero-left">
+          <p class="hero-prefix">ARCHIVE RECOVERED — 2024</p>
+
+          <h1 class="hero-title" id="hero-title">
+            <span class="m-prefix">M.</span>
+            <span class="glitch" data-text="CENOTAPH">CENOTAPH</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            A monument with no body beneath it.<br/>
+            <em>The subject designated M.</em> built the vault, polished the stone,
+            set the table. Then disappeared inside the architecture.
+            What follows is not music. It is forensic evidence —
+            preserved, fresh, and irrefutably dead.
+          </p>
+
+          <div class="hero-cta-row">
+            <a href="#archive" class="btn-primary">
+              <span>ACCESS ARCHIVE</span>
+              <span>→</span>
+            </a>
+            <a href="#vault" class="btn-ghost">Request Vault Authorization</a>
+          </div>
+        </div>
+
+        <div class="hero-panel" role="complementary" aria-label="System status">
+          <div class="panel-row">
+            <span class="panel-label">STATUS</span>
+            <span class="panel-val live" id="sys-status">ACTIVE</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">FILES RECOVERED</span>
+            <span class="panel-val" id="sys-files">02 / 12</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">ACCESS LEVEL</span>
+            <span class="panel-val" id="sys-access">CONDITIONAL</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">VAULT</span>
+            <span class="panel-val locked" id="sys-vault">LOCKED</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">BPM</span>
+            <span class="panel-val">182</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">SYSTEM INTEGRITY</span>
+            <span class="panel-val" id="sys-integrity">74.3%</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">LAST BREACH</span>
+            <span class="panel-val" id="sys-breach">—</span>
+          </div>
+          <div class="panel-row">
+            <span class="panel-label">SUBJECT PROFILE</span>
+            <span class="panel-val" id="sys-subject">UNKNOWN</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MANIFESTO TICKER -->
+    <div class="manifesto-strip" aria-hidden="true">
+      <div class="manifesto-ticker" id="ticker">
+        <span class="ticker-item">Preserved. Fresh. Dead.</span>
+        <span class="ticker-item">Five-star silence</span>
+        <span class="ticker-item">182 BPM — the resting heart rate of controlled collapse</span>
+        <span class="ticker-item">The floor is made of everything I lost</span>
+        <span class="ticker-item">The archive does not welcome. It authorizes.</span>
+        <span class="ticker-item">No blood on the apron. Immaculate presentation.</span>
+        <span class="ticker-item">Every scar is a pillar, built it to last</span>
+        <span class="ticker-item">The void is not empty — it is a masterpiece</span>
+        <span class="ticker-item">Preserved. Fresh. Dead.</span>
+        <span class="ticker-item">Five-star silence</span>
+        <span class="ticker-item">182 BPM — the resting heart rate of controlled collapse</span>
+        <span class="ticker-item">The floor is made of everything I lost</span>
+        <span class="ticker-item">The archive does not welcome. It authorizes.</span>
+        <span class="ticker-item">No blood on the apron. Immaculate presentation.</span>
+        <span class="ticker-item">Every scar is a pillar, built it to last</span>
+        <span class="ticker-item">The void is not empty — it is a masterpiece</span>
+      </div>
+    </div>
+
+    <!-- ARCHIVE FILES -->
+    <section id="archive" aria-labelledby="archive-heading">
+      <div class="section-header">
+        <span class="section-code">SECTION_01</span>
+        <h2 class="section-title" id="archive-heading">Recovered Files</h2>
+        <div class="section-rule"></div>
+        <span class="section-code">03 DOCUMENTS</span>
+      </div>
+
+      <div class="archive-grid">
+
+        <!-- FILE_001 — AVAILABLE -->
+        <article class="archive-item has-player" aria-label="File 001: Vacuum Sealed">
+          <div class="file-tag">
+            <span>FILE_001</span>
+            <span class="status-badge active">AVAILABLE</span>
+          </div>
+          <h3 class="file-name">Vacuum Sealed</h3>
+          <p class="file-desc">
+            Atmospheric pressure: Maximum. Oxygen: Expelled. A sonic study in clinical hyper-vigilance, where 182 BPM pulse meets the paranoid. The sound of a life lived in a pneumatic void—tight, cold, and absolute. There is no room to breathe. Only to perform. Format: Underground Orchestral Liquid DnB, 182 BPM.
+          </p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">2024.01.09</span></span>
+            <span><span>INTEGRITY</span><span class="val">99.1%</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">PUBLIC — LEVEL 0</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+
+          <audio id="player-file-001" preload="metadata" src="MCenotaph_VACUUM_SEALED.mp3"></audio>
+          <div class="player-ui" id="player-ui-001">
+            <button class="play-btn" id="play-btn-001" aria-label="Play Vacuum Sealed">
+              <span id="play-icon-001">▶</span>&nbsp; PLAY FILE_001
+            </button>
+            <div class="progress-wrap" id="progress-wrap-001">
+              <div class="progress-bar" id="progress-bar-001"></div>
+            </div>
+            <span class="time-display" id="time-001">00:00</span>
+          </div>
+        </article>
+
+        <!-- EVIDENCE_A — ACTIVE WITH PLAYER -->
+        <article class="archive-item has-player" aria-label="Evidence A: Sweet Descent">
+          <div class="file-tag">
+            <span>EVIDENCE_A</span>
+            <span class="status-badge active">AVAILABLE</span>
+          </div>
+          <h3 class="file-name">Sweet Descent</h3>
+          <p class="file-desc">
+            Drowning in the silk. The subject maps the pharmacology of aesthetic
+            surrender — luxury as anaesthetic, gold-plated gravity as mechanism of
+            controlled dissolution. Numb. Proper numb. And it feels expensive.
+            Format: Orchestral Liquid DnB / Grime, 182 BPM.
+          </p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">2024.03.17</span></span>
+            <span><span>INTEGRITY</span><span class="val">96.7%</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">PUBLIC — LEVEL 0</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+
+          <!-- AUDIO PLAYER -->
+          <audio id="player-evidence-a" preload="metadata" src="MCenotaph_SWEET_DESCENT.mp3"></audio>
+
+          <div class="player-ui" id="player-ui-a">
+            <button class="play-btn" id="play-btn-a" aria-label="Play Sweet Descent">
+              <span id="play-icon-a">▶</span>&nbsp; PLAY EVIDENCE_A
+            </button>
+            <div class="progress-wrap" id="progress-wrap-a">
+              <div class="progress-bar" id="progress-bar-a"></div>
+            </div>
+            <span class="time-display" id="time-a">00:00</span>
+          </div>
+        </article>
+
+        <!-- ARCHIVE_LOG -->
+        <article class="archive-item locked" id="archive-log-card" tabindex="0" aria-label="Archive Log: Architect of Void — Classified">
+          <div class="file-tag">
+            <span>ARCHIVE_LOG</span>
+            <span class="status-badge classified" id="archive-log-badge">CLASSIFIED</span>
+          </div>
+          <h3 class="file-name">Architect of Void</h3>
+          <p class="file-desc">
+            Terminal document. The subject does not rebuild from ruins —
+            the subject builds on the fact that ruins are the only legitimate foundation.
+            Every scar a pillar. Every debt a cornerstone. The void is not empty.
+            It is a masterpiece. Vault authorization required.
+          </p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val" id="archive-log-recovered">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val" id="archive-log-integrity">CORRUPTED</span></span>
+            <span><span>CLASSIFICATION</span><span class="val" id="archive-log-class">VAULT — LEVEL 3</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay" id="archive-log-lock" aria-hidden="true">⌇ LOCKED</span>
+
+          <!-- Player — hidden until vault unlocked -->
+          <audio id="player-archive-log" preload="metadata" src="MCenotaph_ARCHITECT_OF_VOID.mp3"></audio>
+          <div class="player-ui" id="player-ui-log" style="display:none;">
+            <button class="play-btn" id="play-btn-log" aria-label="Play Architect of Void">
+              <span id="play-icon-log">▶</span>&nbsp; PLAY ARCHIVE_LOG
+            </button>
+            <div class="progress-wrap" id="progress-wrap-log">
+              <div class="progress-bar" id="progress-bar-log"></div>
+            </div>
+            <span class="time-display" id="time-log">00:00</span>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- LOCKED FILES — SECTION 02 -->
+    <section id="locked-files" aria-labelledby="locked-heading">
+      <div class="section-header">
+        <span class="section-code">SECTION_02</span>
+        <h2 class="section-title" id="locked-heading">Classified Documents</h2>
+        <div class="section-rule"></div>
+        <span class="section-code">09 FRAGMENTS</span>
+      </div>
+      <div class="archive-grid">
+
+        <article class="archive-item locked" id="card-silk" aria-label="File 002 — Classified">
+          <div class="file-tag"><span>FILE_002</span><span class="status-badge classified" id="badge-silk">CORRUPTED</span></div>
+          <h3 class="file-name" style="color:var(--ghost);">Silk Garrotte</h3>
+          <p class="file-desc">It ain't murder if you're smiling when you do it. Documentation of systematic self-elimination. Method: asphyxiation by luxury. Clean. Silent. Professional. Format: Orchestral Neurofunk, 182 BPM.</p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val" id="rec-silk" style="color:var(--danger)">FAILED</span></span>
+            <span><span>INTEGRITY</span><span class="val" id="int-silk" style="color:var(--danger)">12.4%</span></span>
+            <span><span>CLASSIFICATION</span><span class="val" id="cls-silk">RESTRICTED — LEVEL 1</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay" id="lock-silk" style="color:var(--danger)">⌇ CORRUPTED</span>
+          <audio id="player-silk" preload="metadata" src="MCenotaph_SILK_GARROTTE.mp3"></audio>
+          <div class="player-ui" id="ui-silk" style="display:none;">
+            <button class="play-btn" id="play-btn-silk" aria-label="Play Silk Garrotte">
+              <span id="play-icon-silk">▶</span>&nbsp; PLAY FILE_002
+            </button>
+            <div class="progress-wrap" id="progress-wrap-silk">
+              <div class="progress-bar" id="progress-bar-silk"></div>
+            </div>
+            <span class="time-display" id="time-silk">00:00</span>
+          </div>
+        </article>
+
+        <article class="archive-item locked" aria-label="File 003 — Classified">
+          <div class="file-tag"><span>FILE_003</span><span class="status-badge classified">RESTRICTED</span></div>
+          <h3 class="file-name" style="color:var(--ghost);">Ghost Protocol</h3>
+          <p class="file-desc">The subject learns to move through spaces without leaving evidence of occupancy. Invisibility as survival mechanism. The art of existing without disturbing the surface. Format: Orchestral Liquid DnB, 182 BPM.</p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val">—</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">RESTRICTED — LEVEL 1</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay">⌇ LOCKED</span>
+        </article>
+
+        <article class="archive-item locked" id="card-marble" aria-label="File 004 — Classified">
+          <div class="file-tag"><span>FILE_004</span><span class="status-badge classified" id="badge-marble">RESTRICTED</span></div>
+          <h3 class="file-name" style="color:var(--ghost);">Marble Face</h3>
+          <p class="file-desc">Forty-seven covers. Full occupancy. The subject's resting expression under operational pressure. Controlled presentation as neurological armour. What is displayed is not what is felt. Format: Orchestral Grime, 182 BPM.</p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val" id="rec-marble">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val" id="int-marble">—</span></span>
+            <span><span>CLASSIFICATION</span><span class="val" id="cls-marble">RESTRICTED — LEVEL 1</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay" id="lock-marble">⌇ LOCKED</span>
+          <audio id="player-marble" preload="metadata" src="MCenotaph_MARBLE_FACE.mp3"></audio>
+          <div class="player-ui" id="ui-marble" style="display:none;">
+            <button class="play-btn" id="play-btn-marble" aria-label="Play Marble Face">
+              <span id="play-icon-marble">▶</span>&nbsp; PLAY FILE_004
+            </button>
+            <div class="progress-wrap" id="progress-wrap-marble">
+              <div class="progress-bar" id="progress-bar-marble"></div>
+            </div>
+            <span class="time-display" id="time-marble">00:00</span>
+          </div>
+        </article>
+
+        <article class="archive-item locked" id="card-golden" aria-label="File 005 — Classified">
+          <div class="file-tag"><span>FILE_005</span><span class="status-badge classified" id="badge-golden">RESTRICTED</span></div>
+          <h3 class="file-name" style="color:var(--ghost);">Golden Decay</h3>
+          <p class="file-desc">Rust is the new luxury. The subject documents the oxidation process — when gold loses its surface and what was beneath is finally visible. Corrosion as revelation. Format: Orchestral Neurofunk, 182 BPM.</p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val" id="rec-golden">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val" id="int-golden">—</span></span>
+            <span><span>CLASSIFICATION</span><span class="val" id="cls-golden">RESTRICTED — LEVEL 2</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay" id="lock-golden">⌇ LOCKED</span>
+          <audio id="player-golden" preload="metadata" src="MCenotaph_GOLDEN_DECAY.mp3"></audio>
+          <div class="player-ui" id="ui-golden" style="display:none;">
+            <button class="play-btn" id="play-btn-golden" aria-label="Play Golden Decay">
+              <span id="play-icon-golden">▶</span>&nbsp; PLAY FILE_005
+            </button>
+            <div class="progress-wrap" id="progress-wrap-golden">
+              <div class="progress-bar" id="progress-bar-golden"></div>
+            </div>
+            <span class="time-display" id="time-golden">00:00</span>
+          </div>
+        </article>
+
+        <article class="archive-item locked" aria-label="File 006 — Classified">
+          <div class="file-tag"><span>FILE_006</span><span class="status-badge classified">RESTRICTED</span></div>
+          <h3 class="file-name" style="color:var(--ghost);">Employee of the Month</h3>
+          <p class="file-desc">Commendation document. The subject performed above and beyond. No blood on the whites. Not one drop. The award was presented. The subject smiled. They gave him a frame for it, blud. Format: Dark Liquid DnB, 182 BPM.</p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val">—</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">RESTRICTED — LEVEL 2</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay">⌇ LOCKED</span>
+        </article>
+
+        <article class="archive-item locked" aria-label="File 007 — Classified">
+          <div class="file-tag"><span>FILE_007</span><span class="status-badge classified">RESTRICTED</span></div>
+          <h3 class="file-name" style="color:var(--ghost);">The Customer Is King</h3>
+          <p class="file-desc">But the king is dead, fam. Examination of asymmetric power exchange disguised as service. The subject enumerates the transactions. Nobody calls it what it is. Format: Orchestral Liquid DnB / Grime, 182 BPM.</p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val">—</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">RESTRICTED — LEVEL 2</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay">⌇ LOCKED</span>
+        </article>
+
+        <article class="archive-item locked" aria-label="File 008 — Classified">
+          <div class="file-tag"><span>FILE_008</span><span class="status-badge classified">RESTRICTED</span></div>
+          <h3 class="file-name" style="color:var(--ghost);">Pressure Cooker</h3>
+          <p class="file-desc">If I crack a seal, the whole building goes. The physics of internal containment. Thermal dynamics of suppressed affect. The subject calculates load-bearing capacity daily. Has not miscalculated. Yet. Format: Neurofunk, 182 BPM.</p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val">—</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">VAULT — LEVEL 3</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay" style="color:var(--gold-dim)">⌇ VAULT ONLY</span>
+        </article>
+
+        <article class="archive-item locked" aria-label="File 009 — Classified">
+          <div class="file-tag"><span>FILE_009</span><span class="status-badge classified">RESTRICTED</span></div>
+          <h3 class="file-name" style="color:var(--ghost);">Gold Plated Gravity</h3>
+          <p class="file-desc">Falling through the floors. Terminal velocity inside an environment engineered to feel like ascending. The subject documents the paradox: the more beautiful the container, the faster the descent. Format: Orchestral Liquid DnB, 182 BPM.</p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val">—</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">VAULT — LEVEL 3</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay" style="color:var(--gold-dim)">⌇ VAULT ONLY</span>
+        </article>
+
+        <article class="archive-item locked" aria-label="File 010 — Classified">
+          <div class="file-tag"><span>FILE_010</span><span class="status-badge classified">RESTRICTED</span></div>
+          <h3 class="file-name" style="color:var(--ghost);">The Estate of M.</h3>
+          <p class="file-desc">Final testament. The subject designates M. bequeaths the architecture. What remains when the architect is gone: the pressure, the symmetry, the silence. This document is the monument. Format: Orchestral Neurofunk, 182 BPM.</p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val">PENDING</span></span>
+            <span><span>INTEGRITY</span><span class="val">—</span></span>
+            <span><span>CLASSIFICATION</span><span class="val">VAULT — LEVEL 3</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <span class="lock-overlay" style="color:var(--gold-dim)">⌇ VAULT ONLY</span>
+        </article>
+
+      </div>
+    </section>
+    <div class="vault-section" id="vault">
+      <div class="vault-inner">
+        <div class="section-header">
+          <span class="section-code">SECTION_02</span>
+          <h2 class="section-title">The Vault</h2>
+          <div class="section-rule"></div>
+          <span class="section-code">AUTH REQUIRED</span>
+        </div>
+
+        <div class="vault-terminal" role="form" aria-label="Vault authentication terminal">
+          <div class="vault-body">
+            <p class="vault-desc">
+              <strong>Authorization Protocol:</strong> The vault does not distribute keys.
+              The key is embedded inside the work itself — in the silence between the notes,
+              in the condition the music was composed inside.<br/><br/>
+              Those who listen closely enough will find it. Those who do not
+              are not authorized. This is not a barrier. It is a filter.
+            </p>
+
+            <div class="vault-input-group" id="vault-input-group">
+              <span class="vault-prefix">KEY://</span>
+              <input
+                type="password"
+                id="vault-key"
+                placeholder="INSERT AUTHORIZATION KEY"
+                autocomplete="off"
+                spellcheck="false"
+                maxlength="32"
+                aria-label="Vault authorization key"
+              />
+              <button id="vault-submit" type="button" aria-label="Submit key">SUBMIT</button>
+            </div>
+            <p id="vault-response" aria-live="polite"></p>
+
+            <div class="vault-hint">
+              <span style="color:var(--ghost); letter-spacing:0.15em;">AUTHORIZATION HINT</span>
+              <br/><br/>
+              <span class="clue" title="The subject did not scream. The subject counted.">
+                The subject did not scream. The subject counted.
+              </span>
+              <br/><br/>
+              <span style="color:var(--dim); font-size:0.58rem; line-height:2.2;">
+                In EVIDENCE_A — at the moment the orchestra stops —<br/>
+                count four beats of silence.<br/><br/>
+                The word that names that silence<br/>
+                is the word the subject lived inside for years.<br/><br/>
+                It is not written in the lyrics.<br/>
+                It is the condition the music was composed inside.<br/><br/>
+                <span style="color:var(--muted)">[ The key is a single word. All caps. ]</span>
+              </span>
+            </div>
+            <!-- Vault content (unlocked state) -->
+            <div id="vault-content" aria-live="polite">
+              <div class="vault-doc-header">
+                ▸ VAULT DOCUMENT — CLEARANCE GRANTED — LEVEL 3
+              </div>
+              <div class="vault-doc-body">
+                <h3>M. CENOTAPH — Investment Memorandum</h3>
+                <p>
+                  M. CENOTAPH is not a music project. It is a content architecture —
+                  a narrative universe built around a single structural concept:
+                  the monument erected for someone who did not die, but disappeared
+                  into the system that employed them.
+                </p>
+                <p>
+                  <strong style="color:var(--bone); font-weight:400;">The Artist.</strong>
+                  The subject designated M. spent years operating at the highest
+                  level of European luxury service — a position that requires the
+                  neurological architecture of a trauma survivor: hypervigilance,
+                  compressed threat assessment, anticipatory pattern recognition
+                  calibrated to 300ms windows. This is not metaphor. It is
+                  measurable. The music at 182 BPM is not arbitrary — it is the
+                  precise mean resting heart rate recorded during service at full
+                  occupancy. The trauma was the instrument. The instrument was
+                  already professional-grade.
+                </p>
+                <p>
+                  <strong style="color:var(--bone); font-weight:400;">The Catalogue.</strong>
+                  Three singles in active development: VACUUM SEALED (the compression),
+                  SWEET DESCENT (the surrender), ARCHITECT OF VOID (the reconstruction).
+                  Each document a distinct psychological state. Each is a standalone
+                  release and a chapter in a larger narrative arc.
+                  Format: Orchestral Liquid DnB, 182 BPM, featuring dual-voice
+                  composition — The Authority (female, RP) and The Architect (male, London Estuary).
+                </p>
+                <p>
+                  <strong style="color:var(--bone); font-weight:400;">The Market.</strong>
+                  The overlap between luxury audience and underground electronic music
+                  is underserved and high-value: 25–40, high disposable income,
+                  anti-mainstream, experience-driven. M. CENOTAPH does not compete
+                  in that market. It creates a category: forensic luxury.
+                  The aesthetic language of a five-star establishment applied
+                  to the documentation of its own violence.
+                </p>
+                <p>
+                  <strong style="color:var(--bone); font-weight:400;">The Architecture.</strong>
+                  This site is not a promotional tool. It is the first artifact.
+                  The vault system, the boot sequence, the classified file structure —
+                  these are not decoration. They are the product. The audience
+                  is not consuming content. They are being granted conditional access
+                  to an archive. That distinction is the entire brand.
+                </p>
+                <p style="color:var(--ghost); font-size:0.6rem; margin-top:2rem; border-top:1px solid var(--border-soft); padding-top:1.5rem;">
+                  For licensing, investment, or collaboration enquiries:<br/>
+                  access is granted by the archive, not by request.<br/>
+                  You already know where to find the key.
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         FRAGMENT_DREAM — MEMORY PROTOCOL MINIGAME
+    ============================================================ -->
+    <div id="minigame-section" aria-labelledby="mg-heading">
+      <div style="max-width:var(--col-max); margin:0 auto;">
+        <div class="section-header">
+          <span class="section-code">SECTION_03</span>
+          <h2 class="section-title" id="mg-heading">Memory Protocol</h2>
+          <div class="section-rule"></div>
+          <span class="section-code">FRAGMENT_DREAM</span>
+        </div>
+
+        <div class="vault-terminal" id="minigame-terminal" style="max-width:720px;">
+          <div class="vault-body">
+
+            <!-- INTRO STATE -->
+            <div id="mg-intro">
+              <p class="vault-desc">
+                <strong>Fragmented signal detected.</strong> The archive holds one final transmission —
+                but it is not stored. It is <em>remembered</em>.<br/><br/>
+                The system will flash a sequence of cells. Memorise the pattern.
+                Reproduce it exactly. Each level adds another fragment.<br/><br/>
+                Reach <strong style="color:var(--bone)">Level 6</strong> to recover
+                <strong style="color:var(--accent)">FRAGMENT_DREAM</strong>.
+                One mistake ends the protocol.
+              </p>
+              <button id="mg-start-btn" class="play-btn" style="width:auto; margin-top:1rem; pointer-events:all;">
+                ▶&nbsp; INITIATE MEMORY PROTOCOL
+              </button>
+            </div>
+
+            <!-- GAME STATE -->
+            <div id="mg-game" style="display:none;">
+              <div id="mg-hud">
+                <span id="mg-level-display">LEVEL 01 / 10</span>
+                <span id="mg-phase-display">MEMORISE</span>
+              </div>
+
+              <!-- Grid — 4×4 cells -->
+              <div id="mg-grid" role="grid" aria-label="Memory grid"></div>
+
+              <div id="mg-message"></div>
+
+              <button id="mg-confirm-btn" class="play-btn" style="width:auto; display:none; pointer-events:all;">
+                ✓&nbsp; CONFIRM SEQUENCE
+              </button>
+            </div>
+
+            <!-- WIN STATE -->
+            <div id="minigame-win" style="display:none;">
+              <div id="mg-win-headline">▸ MEMORY PROTOCOL COMPLETE</div>
+              <div id="mg-win-quote">"The void is not empty. It is a masterpiece."</div>
+              <div id="mg-win-sub">FRAGMENT_DREAM — RECOVERED FROM THE ARCHITECTURE OF LOSS</div>
+              <audio id="player-fragment" preload="metadata" src="MCenotaph_FRAGMENTED_DREAM.mp3"></audio>
+              <div class="player-ui" id="ui-fragment" style="pointer-events:all; display:flex; margin-top:1.4rem;">
+                <button class="play-btn" id="play-btn-fragment" style="pointer-events:all;">
+                  <span id="play-icon-fragment">▶</span>&nbsp; PLAY FRAGMENT_DREAM
+                </button>
+                <div class="progress-wrap" id="progress-wrap-fragment" style="pointer-events:all;">
+                  <div class="progress-bar" id="progress-bar-fragment"></div>
+                </div>
+                <span class="time-display" id="time-fragment">00:00</span>
+              </div>
+            </div>
+
+            <!-- FAIL STATE -->
+            <div id="mg-fail" style="display:none;">
+              <div id="mg-fail-headline">▸ PROTOCOL INTERRUPTED</div>
+              <div id="mg-fail-sub">The fragment dissolves. Memory failed at Level <span id="mg-fail-level">—</span>.</div>
+              <button id="mg-retry-btn" class="play-btn" style="width:auto; margin-top:1.2rem; pointer-events:all;">
+                ↺&nbsp; RESTART PROTOCOL
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      <div class="footer-left">
+        M. CENOTAPH — DIGITAL NECROPOLIS<br/>
+        Archive Status: PARTIAL RECOVERY<br/>
+        © The Estate of M. — All Rights Withheld
+      </div>
+      <div class="footer-right">
+        This archive is not public property.<br/>
+        Your access has been logged.<br/>
+        <span style="color: var(--dim)">Session ID: <span id="session-id"></span></span>
+      </div>
+    </footer>
+
+  </div><!-- /main-content -->
+
+  <!-- ============================================================
+       JAVASCRIPT
+  ============================================================ -->
+  <script>
+    'use strict';
+
+    /* ── Utilities ───────────────────────────────────────────── */
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+    const qs    = sel => document.querySelector(sel);
+    const rand  = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+
+    /* ── Session ID ──────────────────────────────────────────── */
+    const sessionId = [...Array(16)].map(() =>
+      Math.floor(Math.random() * 16).toString(16)).join('').toUpperCase();
+    qs('#session-id').textContent = sessionId;
+
+    /* ── fmt helper ─────────────────────────────────────────── */
+    function fmt(s) {
+      if (isNaN(s)) return '00:00';
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+    }
+
+    /* ============================================================
+       INTEGRITY BAR — 12 slots, each = 8.33%
+       Starts at 16.6% (2 unlocked by default)
+    ============================================================ */
+    const TOTAL_FILES  = 12;
+    const SLOT_PCT     = 100 / TOTAL_FILES; // 8.33%
+
+    // Track unlocked count (2 default = Vacuum + Sweet Descent)
+    let unlockedCount = 2;
+
+    function updateIntegrityBar(count) {
+      const bar = qs('#integrity-bar-fill');
+      if (!bar) return;
+      const pct = Math.min(100, count * SLOT_PCT);
+      bar.style.width = pct + '%';
+
+      // Colour progression
+      bar.className = '';
+      if (pct >= 100)      bar.classList.add('full');
+      else if (pct >= 60)  bar.classList.add('high');
+      else if (pct >= 33)  bar.classList.add('mid');
+
+      // If full — trigger Gold Mode after delay
+      if (pct >= 100) triggerGoldMode();
+    }
+
+    // Initialise bar
+    updateIntegrityBar(unlockedCount);
+
+    /* ============================================================
+       SYS_STATUS ENGINE
+    ============================================================ */
+    const SYS = {
+      played001:    false,
+      playedA:      false,
+      playedLog:    false,
+      unlockedFiles: 2,    // vault unlocks add to this
+    };
+
+    // Map: vaultCode → { count: files unlocked total, ... }
+    const VAULT_CODES = {
+      // ── File unlocks ───────────────────────────────────────────
+      'ASPHYXIA':  { file: 'FILE_002', title: 'Silk Garrotte',     msg: 'EXECUTING PROTOCOL... SILK GARROTTE RECOVERED.',  cardId: 'card-silk',    audioId: 'player-silk',    uiId: 'ui-silk',    lockId: 'lock-silk',    badgeId: 'badge-silk',    recId: 'rec-silk',    intId: 'int-silk',    clsId: 'cls-silk'    },
+      'MARBLE':    { file: 'FILE_004', title: 'Marble Face',        msg: 'SURFACE CRACKED. MARBLE FACE RECOVERED.',         cardId: 'card-marble',  audioId: 'player-marble',  uiId: 'ui-marble',  lockId: 'lock-marble',  badgeId: 'badge-marble',  recId: 'rec-marble',  intId: 'int-marble',  clsId: 'cls-marble'  },
+      'DECAY':     { file: 'FILE_005', title: 'Golden Decay',       msg: 'DECAY SEQUENCE INITIATED. OXIDATION CONFIRMED.',  cardId: 'card-golden',  audioId: 'player-golden',  uiId: 'ui-golden',  lockId: 'lock-golden',  badgeId: 'badge-golden',  recId: 'rec-golden',  intId: 'int-golden',  clsId: 'cls-golden'  },
+      'BLUEPRINT': { file: 'ARCHIVE_LOG', title: 'Architect of Void', msg: 'IDENTITY CONFIRMED. WELCOME, MAKER.',           cardId: 'archive-log-card', audioId: 'player-archive-log', uiId: 'player-ui-log', lockId: 'archive-log-lock', badgeId: 'archive-log-badge', recId: 'archive-log-recovered', intId: 'archive-log-integrity', clsId: 'archive-log-class' },
+    };
+
+    // ── Special codes (no file unlock) ─────────────────────────
+    const SPECIAL_CODES = {
+      'GOLDMODE': { msg: 'AESTHETIC PROTOCOL ENGAGED. GOLD MODE ACTIVATED.', action: 'goldmode' },
+    };
+
+    const usedCodes = new Set();
+
+    function animateVal(el, newText, color) {
+      if (!el) return;
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.textContent = newText;
+        if (color) el.style.color = color;
+        el.style.transition = 'opacity 0.4s ease';
+        el.style.opacity = '1';
+      }, 300);
+    }
+
+    function updateSysStatus() {
+      const total = SYS.unlockedFiles;
+      const allPlayed = SYS.played001 && SYS.playedA && SYS.playedLog;
+
+      animateVal(qs('#sys-files'), `0${total < 10 ? '' : ''}${total} / 12`);
+      animateVal(qs('#sys-integrity'), Math.min(100, (total / 12 * 100)).toFixed(1) + '%',
+        total >= 12 ? '#ffd700' : total >= 6 ? 'var(--accent-hot)' : total >= 3 ? 'var(--gold)' : 'var(--ash)');
+
+      if (total >= 12) {
+        animateVal(qs('#sys-access'), 'MAXIMUM — LEVEL 3', 'var(--accent-hot)');
+        animateVal(qs('#sys-subject'), 'ARCHITECT', '#ffd700');
+      } else if (total >= 3) {
+        animateVal(qs('#sys-access'), 'ELEVATED — LEVEL 2', 'var(--gold)');
+        animateVal(qs('#sys-subject'), 'AUTHORIZED', 'var(--gold)');
+      } else if (SYS.played001 || SYS.playedA) {
+        animateVal(qs('#sys-access'), 'CONDITIONAL+', 'var(--ash)');
+        animateVal(qs('#sys-subject'), SYS.played001 && SYS.playedA ? 'PATTERN FORMING' : 'DETECTED', 'var(--ash)');
+      }
+
+      if (total >= 3) {
+        const v = qs('#sys-vault');
+        if (v) { animateVal(v, 'ACTIVE', 'var(--accent-hot)'); v.classList.remove('locked'); }
+      }
+
+      // Breach timestamp — first vault unlock
+      const br = qs('#sys-breach');
+      if (br && br.textContent === '—' && total > 2) {
+        const now = new Date();
+        animateVal(br, now.toISOString().slice(0,10).replace(/-/g,'.') + ' ' + now.toTimeString().slice(0,5), 'var(--danger)');
+      }
+
+      updateIntegrityBar(total);
+
+      if (allPlayed && total >= 3) triggerHiddenMission();
+    }
+
+    /* ── Vault unlock card helper ────────────────────────────── */
+    function unlockCard(code) {
+      const cfg = VAULT_CODES[code];
+      if (!cfg) return;
+
+      const card = qs('#' + cfg.cardId);
+      if (!card) return;
+
+      card.classList.remove('locked');
+      card.classList.add('has-player');
+      card.removeAttribute('tabindex');
+
+      const badge = qs('#' + cfg.badgeId);
+      if (badge) { badge.textContent = 'AVAILABLE'; badge.className = 'status-badge active'; }
+
+      const lockEl = qs('#' + cfg.lockId);
+      if (lockEl) lockEl.style.display = 'none';
+
+      const now = new Date().toISOString().slice(0,10).replace(/-/g,'.');
+      const recEl = qs('#' + cfg.recId);
+      const intEl = qs('#' + cfg.intId);
+      const clsEl = qs('#' + cfg.clsId);
+      if (recEl) recEl.textContent = now;
+      if (intEl) { intEl.textContent = '100.0%'; intEl.style.color = ''; }
+      if (clsEl) clsEl.textContent = 'DECLASSIFIED';
+
+      const audioEl  = qs('#' + cfg.audioId);
+      const playerUI = qs('#' + cfg.uiId);
+      if (audioEl) audioEl.preload = 'metadata';
+      if (playerUI) {
+        playerUI.style.display = 'flex';
+        playerUI.style.animation = 'fadeInUp 0.6s ease';
+      }
+
+      SYS.unlockedFiles++;
+      updateSysStatus();
+
+      // Wire up player if not already wired
+      wirePlayer(cfg.audioId, cfg.uiId);
+    }
+
+    /* ── Generic player wiring ───────────────────────────────── */
+    const wiredPlayers = new Set();
+
+    function wirePlayer(audioId, uiId) {
+      if (wiredPlayers.has(audioId)) return;
+      wiredPlayers.add(audioId);
+
+      const audio = qs('#' + audioId);
+      if (!audio) return;
+
+      const ui      = qs('#' + uiId);
+      if (!ui) return;
+
+      const playBtn  = ui.querySelector('.play-btn');
+      const playIcon = ui.querySelector('.play-btn span');
+      const bar      = ui.querySelector('.progress-bar');
+      const wrap     = ui.querySelector('.progress-wrap');
+      const timeEl   = ui.querySelector('.time-display');
+
+      if (playBtn) {
+        playBtn.addEventListener('click', () => {
+          if (audio.paused) {
+            if (audio.readyState === 0) audio.load();
+            const doPlay = () => {
+              audio.play().then(() => { playIcon.textContent = '■'; playBtn.classList.add('playing'); }).catch(console.warn);
+            };
+            audio.readyState >= 2 ? doPlay() : audio.addEventListener('canplay', doPlay, { once: true });
+          } else {
+            audio.pause(); playIcon.textContent = '▶'; playBtn.classList.remove('playing');
+          }
+        });
+      }
+
+      if (wrap) {
+        wrap.addEventListener('click', e => {
+          if (!audio.duration) return;
+          const rect = wrap.getBoundingClientRect();
+          audio.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * audio.duration;
+        });
+      }
+
+      audio.addEventListener('timeupdate', () => {
+        if (!audio.duration) return;
+        if (bar) bar.style.width = (audio.currentTime / audio.duration * 100) + '%';
+        if (timeEl) timeEl.textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration);
+      });
+
+      audio.addEventListener('ended', () => {
+        if (playIcon) playIcon.textContent = '▶';
+        if (playBtn)  playBtn.classList.remove('playing');
+        if (bar)      bar.style.width = '0%';
+        if (timeEl)   timeEl.textContent = '00:00';
+      });
+    }
+
+    /* ── Gold Mode ───────────────────────────────────────────── */
+    let goldTriggered = false;
+    async function triggerGoldMode() {
+      if (goldTriggered) return;
+      goldTriggered = true;
+
+      await delay(1000);
+      document.body.classList.add('gold-mode');
+
+      // Inject Legacy file card
+      const grid = qs('.archive-grid');
+      if (grid) {
+        const legacy = document.createElement('article');
+        legacy.className = 'archive-item has-player';
+        legacy.id = 'card-legacy';
+        legacy.style.cssText = 'border: 1px solid var(--gold); animation: fadeInUp 0.8s ease;';
+        legacy.innerHTML = `
+          <div class="file-tag">
+            <span style="color:var(--gold)">FILE_RESTORED</span>
+            <span class="status-badge active" style="color:var(--gold); border-color:rgba(255,215,0,0.4)">THE LEGACY</span>
+          </div>
+          <h3 class="file-name" style="color:#ffd700;">The Legacy</h3>
+          <p class="file-desc" style="color:var(--ash);">
+            Archive complete. The monument stands. The subject designated M. has been
+            fully recovered — not as a body, but as an architecture. This is the bonus
+            transmission. It was always here. You had to earn it.
+          </p>
+          <div class="file-meta">
+            <span><span>RECOVERED</span><span class="val" style="color:var(--gold)">NOW</span></span>
+            <span><span>INTEGRITY</span><span class="val" style="color:var(--gold)">100.0%</span></span>
+            <span><span>CLASSIFICATION</span><span class="val" style="color:var(--gold)">LEGACY — UNRESTRICTED</span></span>
+          </div>
+          <div class="file-access-bar"></div>
+          <audio id="player-legacy" preload="metadata" src="MCenotaph_THE_LEGACY.mp3"></audio>
+          <div class="player-ui" id="ui-legacy">
+            <button class="play-btn" id="play-btn-legacy" style="color:var(--gold); border-color:rgba(255,215,0,0.3)">
+              <span id="play-icon-legacy">▶</span>&nbsp; PLAY THE LEGACY
+            </button>
+            <div class="progress-wrap" id="progress-wrap-legacy">
+              <div class="progress-bar" id="progress-bar-legacy" style="background:var(--gold)"></div>
+            </div>
+            <span class="time-display" id="time-legacy">00:00</span>
+          </div>
+        `;
+        grid.appendChild(legacy);
+        initLegacyPlayer();
+      }
+
+      // Mission complete toast
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+        z-index: 9000; font-family: var(--font-mono); font-size: 0.6rem;
+        letter-spacing: 0.2em; color: #ffd700; background: #0a0800;
+        border: 1px solid rgba(255,215,0,0.4); padding: 1rem 2rem;
+        opacity: 0; transition: opacity 1s ease; text-align: center; white-space: nowrap;
+      `;
+      toast.innerHTML = `&gt; ARCHIVE COMPLETE — THE LEGACY RESTORED<br/><span style="color:var(--ghost);font-size:0.52rem;">&gt; GOLD MODE ACTIVATED</span>`;
+      document.body.appendChild(toast);
+      await delay(100);
+      toast.style.opacity = '1';
+      await delay(8000);
+      toast.style.opacity = '0';
+      await delay(1000);
+      toast.remove();
+    }
+
+    /* ── Hidden Mission ──────────────────────────────────────── */
+    let missionTriggered = false;
+    async function triggerHiddenMission() {
+      if (missionTriggered) return;
+      missionTriggered = true;
+      await delay(2000);
+      const el = document.createElement('div');
+      el.style.cssText = `
+        position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+        z-index: 500; font-family: var(--font-mono); font-size: 0.58rem;
+        letter-spacing: 0.2em; color: var(--accent); background: var(--black);
+        border: 1px solid rgba(160,160,255,0.2); padding: 0.8rem 1.6rem;
+        opacity: 0; transition: opacity 1s ease; text-align: center;
+        pointer-events: none; white-space: nowrap;
+      `;
+      el.innerHTML = `&gt; SUBJECT PROFILE: COMPLETE<br/><span style="color:var(--ghost);font-size:0.52rem;">&gt; NEW TRANSMISSION INCOMING...</span>`;
+      document.body.appendChild(el);
+      await delay(100);
+      el.style.opacity = '1';
+      await delay(8000);
+      el.style.opacity = '0';
+      await delay(1000);
+      el.remove();
+    }
+
+    /* ============================================================
+       RANDOM VAULT HINTS
+    ============================================================ */
+    const HINTS = [
+      'Hint: What tightens but never breaks?',
+      'Hint: The monument is empty. Who built it?',
+      'Hint: Rust is the new luxury.',
+      'Hint: Count the silence. Name it.',
+      'Hint: The subject did not scream. The subject counted.',
+      'Hint: What is the word for controlled collapse?',
+      'Hint: Find the four beats where the orchestra holds its breath.',
+      'Hint: The condition the music was composed inside.',
+    ];
+
+    function injectRandomHint() {
+      const hintEl = qs('.vault-hint');
+      if (!hintEl) return;
+      const pick = HINTS[Math.floor(Math.random() * HINTS.length)];
+      const hintLine = document.createElement('div');
+      hintLine.style.cssText = 'margin-top:1.2rem; font-size:0.55rem; color:var(--gold-dim); letter-spacing:0.15em; font-style:italic;';
+      hintLine.textContent = pick;
+      hintEl.appendChild(hintLine);
+    }
+
+    injectRandomHint();
+
+    /* ============================================================
+       BOOT SEQUENCE
+    ============================================================ */
+    const bootLog = qs('#boot-log');
+    const bootSep = qs('#boot-sep');
+    const procBtn = qs('#proceed-btn');
+
+    const bootLines = [
+      { text: '> INITIALIZING RECOVERY SYSTEM v2.4.1',                                                       delay: 250 },
+      { text: '> INTEGRITY CHECK...............................',                                              delay: 700 },
+      { text: '> ARCHIVE CORRUPTION DETECTED — PARTIAL RECOVERY IN PROGRESS',                               delay: 350 },
+      { text: '<span class="dim">────────────────────────────────────────────────────</span>',               delay: 300 },
+      { text: '> FILE_001 [Vacuum Sealed]...........<span class="ok">RECOVERED</span>',                      delay: 280 },
+      { text: '> EVIDENCE_A [Sweet Descent].........<span class="ok">RECOVERED</span>',                      delay: 280 },
+      { text: '> FILE_002 [Silk Garrotte]...........<span style="color:var(--danger)">CORRUPTED — 12.4%</span>', delay: 280 },
+      { text: '> FILE_003 [Ghost Protocol]..........<span class="warn">CLASSIFIED</span>',                   delay: 260 },
+      { text: '> FILE_004 [Marble Face].............<span class="warn">RESTRICTED</span>',                   delay: 260 },
+      { text: '> FILE_005 [Golden Decay]............<span class="warn">RESTRICTED</span>',                   delay: 260 },
+      { text: '> FILE_006 [Employee of the Month]..<span class="warn">RESTRICTED</span>',                   delay: 260 },
+      { text: '> FILE_007 [The Customer Is King]...<span class="warn">RESTRICTED</span>',                   delay: 260 },
+      { text: '> FILE_008 [Pressure Cooker].........<span class="warn">VAULT ACCESS ONLY</span>',           delay: 260 },
+      { text: '> FILE_009 [Gold Plated Gravity].....<span class="warn">VAULT ACCESS ONLY</span>',           delay: 260 },
+      { text: '> FILE_010 [The Estate of M.].......<span class="warn">VAULT ACCESS ONLY</span>',           delay: 260 },
+      { text: '> ARCHIVE_LOG [Architect of Void]...<span class="warn">CLASSIFIED</span>',                   delay: 280 },
+      { text: '<span class="dim">────────────────────────────────────────────────────</span>',               delay: 300 },
+      { text: '> FILES RECOVERED: 02 / 12',                                                                  delay: 250 },
+      { text: '> VAULT STATUS: SEALED',                                                                      delay: 250 },
+      { text: '> ACCESS LEVEL ASSIGNED: CONDITIONAL',                                                       delay: 250 },
+      { text: '<span class="dim">────────────────────────────────────────────────────</span>',               delay: 300 },
+      { text: '> WARNING: You are not invited. You are authorized.',                                         delay: 200 },
+      { text: '> NEURO-LINK REQUIRED FOR ENTRY.',                                                            delay: 200 },
+    ];
+
+    async function runBoot() {
+      for (const item of bootLines) {
+        await delay(item.delay);
+        const line = document.createElement('span');
+        line.className = 'boot-line visible';
+        line.innerHTML = item.text;
+        bootLog.appendChild(line);
+      }
+      await delay(400);
+      bootSep.classList.add('visible');
+      await delay(300);
+      procBtn.classList.add('visible');
+    }
+
+    runBoot();
+
+    procBtn.addEventListener('click', async () => {
+      qs('#boot-screen').classList.add('dismissed');
+      await delay(600);
+      qs('#neuro-screen').classList.add('active');
+      // Start quote rotation
+      quoteInterval = setInterval(rotateQuote, 4000);
+    });
+
+    /* ============================================================
+       NEURO-LINK SCREEN — 69s listen gate
+    ============================================================ */
+    const REQUIRED_SECONDS = 69;
+    let listenedSeconds = 0;
+    let accessGranted   = false;
+
+    function grantAccess() {
+      if (accessGranted) return;
+      accessGranted = true;
+
+      const cd = qs('#neuro-countdown');
+      if (cd) { cd.textContent = 'TRANSMISSION COMPLETE'; cd.classList.add('done'); }
+
+      const listenBar = qs('#neuro-listen-bar');
+      if (listenBar) { listenBar.style.width = '100%'; listenBar.classList.add('complete'); listenBar.classList.remove('active'); }
+
+      const st = qs('#neuro-status-text');
+      if (st) st.textContent = 'NEURO-LINK ESTABLISHED';
+
+      // Show proceed after 1.5s
+      setTimeout(() => {
+        const ep = qs('#epigrafe-proceed');
+        if (ep) ep.classList.add('visible');
+      }, 1500);
+    }
+
+    // Bypass via vault key
+    const neuroKeyInput  = qs('#neuro-key');
+    const neuroKeySubmit = qs('#neuro-key-submit');
+    const neuroBypassResp = qs('#neuro-bypass-resp');
+
+    function tryNeuroBypass() {
+      const val = neuroKeyInput.value.trim().toUpperCase();
+      if (!val) return;
+      if (VAULT_CODES[val] || SPECIAL_CODES[val]) {
+        neuroBypassResp.className = 'neuro-bypass-resp ok';
+        neuroBypassResp.textContent = '> KEY RECOGNIZED — BYPASS AUTHORIZED';
+        pendingNeuroCode = val;
+        setTimeout(grantAccess, 800);
+      } else {
+        neuroBypassResp.className = 'neuro-bypass-resp err';
+        neuroBypassResp.textContent = '> INVALID KEY — CONTINUE LISTENING';
+      }
+    }
+
+    let pendingNeuroCode = null;
+
+    neuroKeySubmit.addEventListener('click', tryNeuroBypass);
+    neuroKeyInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryNeuroBypass(); });
+
+    qs('#epigrafe-proceed').addEventListener('click', async () => {
+      const ea = qs('#epigrafe-audio');
+      if (ea && !ea.paused) ea.pause();
+      qs('#neuro-screen').classList.add('dismissed');
+      await delay(800);
+      qs('#main-content').classList.add('visible');
+
+      // Apply pending bypass
+      if (pendingNeuroCode) {
+        await delay(500);
+        if (VAULT_CODES[pendingNeuroCode]) {
+          if (!usedCodes.has(pendingNeuroCode)) {
+            usedCodes.add(pendingNeuroCode);
+            unlockCard(pendingNeuroCode);
+            if (!vaultCont.classList.contains('visible')) vaultCont.classList.add('visible');
+          }
+        } else if (SPECIAL_CODES[pendingNeuroCode]) {
+          if (SPECIAL_CODES[pendingNeuroCode].action === 'goldmode' && !goldTriggered) {
+            goldTriggered = true;
+            document.body.classList.add('gold-mode');
+          }
+        }
+      }
+    });
+
+    /* ============================================================
+       RANDOM GLITCH
+    ============================================================ */
+    const glitchEl = qs('#glitch-distort');
+
+    async function triggerGlitch() {
+      glitchEl.style.cssText = `
+        opacity: 1;
+        background: linear-gradient(
+          ${rand(0,360)}deg,
+          transparent ${rand(0,40)}%,
+          rgba(160,160,255,0.03) ${rand(40,60)}%,
+          transparent ${rand(60,100)}%
+        );
+        transform: translateY(${rand(-3,3)}px) scaleX(${0.998 + Math.random()*0.004});
+      `;
+      await delay(rand(50, 150));
+      glitchEl.style.opacity = '0';
+    }
+
+    setInterval(() => { if (Math.random() < 0.3) triggerGlitch(); }, 4000);
+
+    /* ============================================================
+       VAULT AUTH — multi-code
+    ============================================================ */
+    const inputGroup = qs('#vault-input-group');
+    const vaultInput = qs('#vault-key');
+    const vaultResp  = qs('#vault-response');
+    const vaultCont  = qs('#vault-content');
+    const submitBtn  = qs('#vault-submit');
+
+    let attempts = 0;
+
+    async function handleVaultSubmit() {
+      const val = vaultInput.value.trim().toUpperCase();
+
+      if (!val) {
+        vaultResp.className = 'err';
+        vaultResp.textContent = '> ERROR: No input detected.';
+        return;
+      }
+
+      attempts++;
+
+      if (VAULT_CODES[val]) {
+        if (usedCodes.has(val)) {
+          vaultResp.className = 'ok';
+          vaultResp.textContent = `> ${VAULT_CODES[val].file} ALREADY RECOVERED.`;
+          return;
+        }
+
+        usedCodes.add(val);
+        inputGroup.classList.add('success');
+        vaultResp.className = 'ok';
+        vaultResp.textContent = '> ' + VAULT_CODES[val].msg;
+
+        await delay(1200);
+        if (usedCodes.size === 1) vaultCont.classList.add('visible');
+
+        unlockCard(val);
+
+        await delay(1000);
+        vaultInput.value = '';
+        vaultInput.disabled = false;
+        submitBtn.disabled = false;
+        inputGroup.classList.remove('success');
+        vaultResp.textContent = `> ${VAULT_CODES[val].file} RECOVERED. INSERT NEXT KEY IF AUTHORIZED.`;
+
+      } else if (SPECIAL_CODES[val]) {
+        const special = SPECIAL_CODES[val];
+        inputGroup.classList.add('success');
+        vaultResp.className = 'ok';
+        vaultResp.textContent = '> ' + special.msg;
+
+        if (special.action === 'goldmode' && !goldTriggered) {
+          await delay(1000);
+          document.body.classList.add('gold-mode');
+          goldTriggered = true;
+          // Show toast — no legacy file, just aesthetics
+          const toast = document.createElement('div');
+          toast.style.cssText = `position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);z-index:9000;font-family:var(--font-mono);font-size:0.6rem;letter-spacing:0.2em;color:#ffd700;background:#0a0800;border:1px solid rgba(255,215,0,0.4);padding:1rem 2rem;opacity:0;transition:opacity 1s ease;text-align:center;white-space:nowrap;pointer-events:none;`;
+          toast.innerHTML = `&gt; GOLD MODE ACTIVATED<br/><span style="color:var(--ghost);font-size:0.52rem;">&gt; AESTHETIC PROTOCOL ENGAGED. THE ARCHIVE SHIFTS.</span>`;
+          document.body.appendChild(toast);
+          await delay(100); toast.style.opacity = '1';
+          await delay(7000); toast.style.opacity = '0';
+          await delay(1000); toast.remove();
+        }
+
+        await delay(1500);
+        vaultInput.value = '';
+        inputGroup.classList.remove('success');
+
+      } else {
+        inputGroup.classList.add('error');
+        vaultResp.className = 'err';
+
+        const msgs = [
+          '> AUTHORIZATION FAILED. This incident has been logged.',
+          '> INCORRECT KEY. The archive does not negotiate.',
+          '> ACCESS DENIED. Return when you are ready.',
+          `> ATTEMPT ${attempts}: You are not authorized. The key is embedded in the work.`,
+          '> SYSTEM NOTE: Only the correct key will unlock. Persistence is not authorization.',
+        ];
+        vaultResp.textContent = msgs[Math.min(attempts - 1, msgs.length - 1)];
+        setTimeout(() => inputGroup.classList.remove('error'), 500);
+      }
+    }
+
+    submitBtn.addEventListener('click', handleVaultSubmit);
+    vaultInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleVaultSubmit(); });
+
+    /* ============================================================
+       INTERSECTION OBSERVER — entrance animations
+    ============================================================ */
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.archive-item:not(.has-player)').forEach((el, i) => {
+      el.style.cssText = `opacity:0;transform:translateY(20px);transition:opacity 0.7s ease ${i*0.1}s,transform 0.7s ease ${i*0.1}s;`;
+      observer.observe(el);
+    });
+
+    /* ============================================================
+       QUOTE ROTATOR
+    ============================================================ */
+    const quotes = document.querySelectorAll('.epigrafe-quote');
+    let currentQuote = 0;
+    let quoteInterval = null;
+
+    function rotateQuote() {
+      quotes[currentQuote].classList.remove('active');
+      currentQuote = (currentQuote + 1) % quotes.length;
+      quotes[currentQuote].classList.add('active');
+    }
+
+    /* ============================================================
+       EPIGRAFE / INTRO AUDIO
+    ============================================================ */
+    const _eAudio   = document.getElementById('epigrafe-audio');
+    const _eIcon    = document.getElementById('epigrafe-icon');
+    const _ePlayBtn = document.getElementById('epigrafe-play-btn');
+    const _eBar     = document.getElementById('epigrafe-progress-bar');
+    const _eProgress= document.getElementById('epigrafe-progress');
+    const _eTime    = document.getElementById('epigrafe-time');
+
+    function toggleEpigrafe() {
+      if (!_eAudio) return;
+      if (_eAudio.paused) {
+        _eAudio.play().then(() => {
+          _eIcon.textContent = '■';
+          _ePlayBtn.classList.add('playing');
+        }).catch(err => console.error(err));
+      } else {
+        _eAudio.pause();
+        _eIcon.textContent = '▶';
+        _ePlayBtn.classList.remove('playing');
+      }
+    }
+
+    function seekEpigrafe(e) {
+      if (!_eAudio || !_eAudio.duration) return;
+      const rect = _eProgress.getBoundingClientRect();
+      const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      _eAudio.currentTime = pct * _eAudio.duration;
+    }
+
+    if (_eAudio) {
+      _eAudio.addEventListener('timeupdate', () => {
+        if (!_eAudio.duration) return;
+        const pct = (_eAudio.currentTime / _eAudio.duration) * 100;
+        _eBar.style.width = pct + '%';
+        _eTime.textContent = fmt(_eAudio.currentTime) + ' / ' + fmt(_eAudio.duration);
+
+        // Count listened seconds (only while actually playing)
+        if (!_eAudio.paused) {
+          listenedSeconds = _eAudio.currentTime;
+          const listenPct = Math.min(100, (listenedSeconds / REQUIRED_SECONDS) * 100);
+          const lb = qs('#neuro-listen-bar');
+          if (lb) {
+            lb.style.width = listenPct + '%';
+            if (listenPct > 0 && listenPct < 100) lb.classList.add('active');
+          }
+
+          // Update countdown
+          const cd = qs('#neuro-countdown');
+          if (cd && !accessGranted) {
+            const rem = Math.max(0, Math.ceil(REQUIRED_SECONDS - listenedSeconds));
+            cd.textContent = rem > 0 ? `${rem}s required` : 'TRANSMISSION COMPLETE';
+          }
+
+          if (listenedSeconds >= REQUIRED_SECONDS && !accessGranted) {
+            grantAccess();
+          }
+        }
+      });
+
+      _eAudio.addEventListener('ended', () => {
+        _eIcon.textContent = '▶';
+        _ePlayBtn.classList.remove('playing');
+        grantAccess(); // if track shorter than 69s, still grant
+      });
+    }
+
+    /* ============================================================
+       UNIFIED AUDIO SYSTEM
+       All players wired here. No onclick attrs needed.
+       Works for visible players AND locked-then-unlocked players.
+    ============================================================ */
+
+    // Master play function - handles load, play, pause, stops other tracks
+    function audioPlay(audioId, btnId, iconId) {
+      const audio = document.getElementById(audioId);
+      const btn   = document.getElementById(btnId);
+      const icon  = document.getElementById(iconId);
+      if (!audio) return;
+
+      if (!audio.paused) {
+        // Pause this track
+        audio.pause();
+        if (icon) icon.textContent = '▶';
+        if (btn)  btn.classList.remove('playing');
+        return;
+      }
+
+      // Stop all other playing tracks first
+      document.querySelectorAll('audio').forEach(other => {
+        if (other !== audio && !other.paused) {
+          other.pause();
+          // Find and reset its button
+          const oBtn  = document.querySelector('[data-audio="' + other.id + '"].play-btn');
+          const oIcon = oBtn && oBtn.querySelector('span');
+          if (oIcon) oIcon.textContent = '▶';
+          if (oBtn)  oBtn.classList.remove('playing');
+        }
+      });
+
+      // Load if needed, then play
+      if (audio.readyState < 1) audio.load();
+
+      const doPlay = () => {
+        audio.play()
+          .then(() => {
+            if (icon) icon.textContent = '■';
+            if (btn)  btn.classList.add('playing');
+          })
+          .catch(err => {
+            console.warn('[MCenotaph] play failed for', audioId, err.message);
+          });
+      };
+
+      if (audio.readyState >= 3) {
+        doPlay();
+      } else {
+        audio.addEventListener('canplaythrough', doPlay, { once: true });
+        // Fallback: also try on canplay
+        audio.addEventListener('canplay', () => {
+          if (audio.paused) doPlay();
+        }, { once: true });
+      }
+    }
+
+    function audioSeekById(e, audioId, wrapId) {
+      const audio = document.getElementById(audioId);
+      const wrap  = document.getElementById(wrapId);
+      if (!audio || !audio.duration || !wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      const x    = (e.touches ? e.touches[0].clientX : e.clientX);
+      audio.currentTime = Math.max(0, Math.min(1, (x - rect.left) / rect.width)) * audio.duration;
+    }
+
+    function wireAllPlayers() {
+      // Config: [audioId, btnId, iconId, barId, wrapId, timeId, sysKey]
+      const PLAYERS = [
+        ['player-file-001',    'play-btn-001',    'play-icon-001',    'progress-bar-001',    'progress-wrap-001',    'time-001',    'played001'],
+        ['player-evidence-a',  'play-btn-a',      'play-icon-a',      'progress-bar-a',      'progress-wrap-a',      'time-a',      'playedA'],
+        ['player-archive-log', 'play-btn-log',    'play-icon-log',    'progress-bar-log',    'progress-wrap-log',    'time-log',    'playedLog'],
+        ['player-silk',        'play-btn-silk',   'play-icon-silk',   'progress-bar-silk',   'progress-wrap-silk',   'time-silk',   null],
+        ['player-marble',      'play-btn-marble', 'play-icon-marble', 'progress-bar-marble', 'progress-wrap-marble', 'time-marble', null],
+        ['player-golden',      'play-btn-golden', 'play-icon-golden', 'progress-bar-golden', 'progress-wrap-golden', 'time-golden', null],
+        ['player-fragment',    'play-btn-fragment','play-icon-fragment','progress-bar-fragment','progress-wrap-fragment','time-fragment',null],
+      ];
+
+      PLAYERS.forEach(([audioId, btnId, iconId, barId, wrapId, timeId, sysKey]) => {
+        const audio = document.getElementById(audioId);
+        const btn   = document.getElementById(btnId);
+        const wrap  = document.getElementById(wrapId);
+        const bar   = document.getElementById(barId);
+        const time  = document.getElementById(timeId);
+        const icon  = document.getElementById(iconId);
+        if (!audio) return;
+
+        // Tag audio for cross-player stop logic
+        audio.dataset.playerId = audioId;
+
+        // Play button
+        if (btn) {
+          btn.dataset.audio = audioId;
+          btn.addEventListener('click', e => {
+            e.stopPropagation();
+            audioPlay(audioId, btnId, iconId);
+          });
+        }
+
+        // Progress seek - mouse and touch
+        if (wrap) {
+          wrap.addEventListener('click', e => {
+            e.stopPropagation();
+            audioSeekById(e, audioId, wrapId);
+          });
+          wrap.addEventListener('touchend', e => {
+            e.preventDefault();
+            audioSeekById(e, audioId, wrapId);
+          });
+        }
+
+        // Time progress update
+        audio.addEventListener('timeupdate', () => {
+          if (!audio.duration) return;
+          const pct = (audio.currentTime / audio.duration) * 100;
+          if (bar)  bar.style.width = pct + '%';
+          if (time) time.textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration);
+          // SYS tracking for auto-unlock
+          if (sysKey && audio.currentTime > 10 && !SYS[sysKey]) {
+            SYS[sysKey] = true;
+            updateSysStatus();
+          }
+        });
+
+        audio.addEventListener('ended', () => {
+          if (icon) icon.textContent = '▶';
+          if (btn)  btn.classList.remove('playing');
+          if (bar)  bar.style.width = '0%';
+          if (time) time.textContent = '00:00';
+        });
+      });
+    }
+
+    // Wire all players immediately on page load
+    wireAllPlayers();
+
+    // Re-wire after vault unlock (for newly shown players)
+    // wireAllPlayers is idempotent - duplicate listeners won't double-fire
+    // because addEventListener with same function reference deduplicates... 
+    // Actually we use anonymous functions so re-wire only for newly revealed players.
+    // unlockCard() calls wirePlayer() already which handles this separately.
+
+    /* ============================================================
+       LEGACY PLAYER (injected dynamically by Gold Mode)
+    ============================================================ */
+    function initLegacyPlayer() {
+      const _aL    = document.getElementById('player-legacy');
+      const _btnL  = document.getElementById('play-btn-legacy');
+      const _icoL  = document.getElementById('play-icon-legacy');
+      const _barL  = document.getElementById('progress-bar-legacy');
+      const _wrapL = document.getElementById('progress-wrap-legacy');
+      const _timeL = document.getElementById('time-legacy');
+
+      window.togglePlayLegacy = function() {
+        if (!_aL) return;
+        if (_aL.paused) {
+          _aL.play().then(() => { _icoL.textContent = '■'; _btnL.classList.add('playing'); }).catch(console.error);
+        } else {
+          _aL.pause(); _icoL.textContent = '▶'; _btnL.classList.remove('playing');
+        }
+      };
+
+      window.seekAudioLegacy = function(e) {
+        if (!_aL || !_aL.duration) return;
+        const rect = _wrapL.getBoundingClientRect();
+        _aL.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * _aL.duration;
+      };
+
+      if (_aL) {
+        _aL.addEventListener('timeupdate', () => {
+          if (!_aL.duration) return;
+          _barL.style.width = (_aL.currentTime / _aL.duration * 100) + '%';
+          _timeL.textContent = fmt(_aL.currentTime) + ' / ' + fmt(_aL.duration);
+        });
+        _aL.addEventListener('ended', () => { _icoL.textContent = '▶'; _btnL.classList.remove('playing'); _barL.style.width = '0%'; _timeL.textContent = '00:00'; });
+      }
+    }
+
+    /* ============================================================
+       MEMORY PROTOCOL — FRAGMENT_DREAM MINIGAME
+    ============================================================ */
+    (function() {
+      const TOTAL_LEVELS = 6;
+      const GRID_SIZE    = 16; // 4×4
+      const FLASH_ON     = 520;  // ms cell lit
+      const FLASH_OFF    = 160;  // ms gap between flashes
+      const RECALL_DELAY = 900;  // ms after showing before recall
+
+      let level       = 1;
+      let sequence    = [];  // indices of cells in order
+      let userInput   = [];
+      let phase       = 'idle'; // idle | showing | recall | checking | win | fail
+      let locked      = true;
+
+      // DOM
+      const intro      = document.getElementById('mg-intro');
+      const gameEl     = document.getElementById('mg-game');
+      const winEl      = document.getElementById('minigame-win');
+      const failEl     = document.getElementById('mg-fail');
+      const grid       = document.getElementById('mg-grid');
+      const levelDisp  = document.getElementById('mg-level-display');
+      const phaseDisp  = document.getElementById('mg-phase-display');
+      const msgEl      = document.getElementById('mg-message');
+      const confirmBtn = document.getElementById('mg-confirm-btn');
+      const startBtn   = document.getElementById('mg-start-btn');
+      const retryBtn   = document.getElementById('mg-retry-btn');
+      const failLevel  = document.getElementById('mg-fail-level');
+
+      /* ── Build grid ─────────────────────────────────────────── */
+      for (let i = 0; i < GRID_SIZE; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'mg-cell';
+        cell.dataset.index = i;
+        cell.setAttribute('role', 'button');
+        cell.setAttribute('aria-label', `Cell ${i + 1}`);
+        cell.addEventListener('click',       () => handleCellClick(i));
+        cell.addEventListener('touchend', e  => { e.preventDefault(); handleCellClick(i); });
+        grid.appendChild(cell);
+      }
+
+      function cells() { return Array.from(grid.querySelectorAll('.mg-cell')); }
+      function cell(i) { return grid.querySelector(`.mg-cell[data-index="${i}"]`); }
+
+      /* ── Utility ────────────────────────────────────────────── */
+      function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+      function setPhase(p, label) {
+        phase = p;
+        phaseDisp.textContent = label;
+        phaseDisp.className   = p === 'recall' ? 'recall' : '';
+      }
+
+      function setMsg(text, cls) {
+        msgEl.textContent = text || '';
+        msgEl.className   = cls  || '';
+      }
+
+      function clearCellClasses() {
+        cells().forEach(c => {
+          c.classList.remove('flash','selected','correct','wrong','interactive');
+          c.style.transitionDelay = '';
+        });
+      }
+
+      function updateHUD() {
+        levelDisp.textContent = `LEVEL ${String(level).padStart(2,'0')} / ${TOTAL_LEVELS}`;
+      }
+
+      /* ── Sequence generation ────────────────────────────────── */
+      function growSequence() {
+        // Add one unique random cell per level (no repeats within a sequence)
+        const available = Array.from({length: GRID_SIZE}, (_,i) => i)
+          .filter(i => !sequence.includes(i));
+        const pick = available[Math.floor(Math.random() * available.length)];
+        sequence.push(pick);
+      }
+
+      /* ── Show sequence (memorise phase) ────────────────────── */
+      async function showSequence() {
+        setPhase('showing', 'MEMORISE');
+        locked = true;
+        clearCellClasses();
+        confirmBtn.style.display = 'none';
+
+        // Brief pause before starting
+        await sleep(500);
+
+        for (let i = 0; i < sequence.length; i++) {
+          const c = cell(sequence[i]);
+          c.classList.add('flash');
+          await sleep(FLASH_ON);
+          c.classList.remove('flash');
+          await sleep(FLASH_OFF);
+        }
+
+        // Transition to recall
+        await sleep(RECALL_DELAY);
+        startRecall();
+      }
+
+      /* ── Recall phase ───────────────────────────────────────── */
+      function startRecall() {
+        setPhase('recall', 'RECALL');
+        userInput = [];
+        locked    = false;
+        cells().forEach(c => c.classList.add('interactive'));
+        setMsg(`Select ${sequence.length} cell${sequence.length > 1 ? 's' : ''} in order`, '');
+        confirmBtn.style.display = 'block';
+      }
+
+      /* ── Handle cell click ──────────────────────────────────── */
+      // Cheat sequence: bottom row L→R — indices 12, 13, 14, 15
+      const CHEAT_SEQ = [12, 13, 14, 15];
+      let cheatBuffer = [];
+
+      function handleCellClick(idx) {
+        if (locked || phase !== 'recall') return;
+        if (userInput.includes(idx)) return; // no duplicate
+        if (userInput.length >= sequence.length) return;
+
+        userInput.push(idx);
+        cell(idx).classList.add('selected');
+
+        // Track cheat buffer regardless of sequence state
+        cheatBuffer.push(idx);
+        if (cheatBuffer.length > CHEAT_SEQ.length) cheatBuffer.shift();
+
+        // Check cheat
+        if (cheatBuffer.join(',') === CHEAT_SEQ.join(',')) {
+          // Flash all bottom cells, then win
+          locked = true;
+          setMsg('> OVERRIDE ACCEPTED.', 'ok');
+          CHEAT_SEQ.forEach(i => { cell(i).classList.remove('selected'); cell(i).classList.add('correct'); });
+          setTimeout(triggerWin, 900);
+          return;
+        }
+
+        setMsg(`${userInput.length} / ${sequence.length} selected`, '');
+
+        // Auto-confirm when all selected
+        if (userInput.length === sequence.length) {
+          setTimeout(checkAnswer, 350);
+        }
+      }
+
+      /* ── Check answer ───────────────────────────────────────── */
+      async function checkAnswer() {
+        if (phase !== 'recall') return;
+        setPhase('checking', 'CHECKING');
+        locked = true;
+        confirmBtn.style.display = 'none';
+        cells().forEach(c => c.classList.remove('interactive'));
+
+        const correct = sequence.every((v, i) => userInput[i] === v);
+
+        if (correct) {
+          // Flash correct cells
+          sequence.forEach(i => { cell(i).classList.remove('selected'); cell(i).classList.add('correct'); });
+          setMsg('> Sequence confirmed.', 'ok');
+          await sleep(900);
+
+          if (level >= TOTAL_LEVELS) {
+            triggerWin();
+          } else {
+            level++;
+            updateHUD();
+            growSequence();
+            setMsg('> Next fragment loading...', '');
+            await sleep(600);
+            showSequence();
+          }
+
+        } else {
+          // Show wrong cells
+          userInput.forEach((v, i) => {
+            const c = cell(v);
+            c.classList.remove('selected');
+            c.classList.add(sequence[i] === v ? 'correct' : 'wrong');
+          });
+          // Also reveal correct ones not selected
+          sequence.forEach(i => {
+            if (!userInput.includes(i)) {
+              cell(i).classList.add('flash');
+            }
+          });
+          setMsg('> Memory protocol failed. Fragment dissolved.', 'fail');
+          await sleep(1800);
+          triggerFail();
+        }
+      }
+
+      /* ── Win ────────────────────────────────────────────────── */
+      function triggerWin() {
+        phase = 'win';
+        gameEl.style.display  = 'none';
+        winEl.style.display   = 'block';
+        winEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Wire fragment player
+        const _fAudio = document.getElementById('player-fragment');
+        const _fBtn   = document.getElementById('play-btn-fragment');
+        const _fIcon  = document.getElementById('play-icon-fragment');
+        const _fBar   = document.getElementById('progress-bar-fragment');
+        const _fWrap  = document.getElementById('progress-wrap-fragment');
+        const _fTime  = document.getElementById('time-fragment');
+
+        if (_fBtn) {
+          _fBtn.addEventListener('click', () => {
+            if (!_fAudio) return;
+            if (_fAudio.paused) {
+              _fAudio.play().then(() => { _fIcon.textContent = '■'; _fBtn.classList.add('playing'); }).catch(console.error);
+            } else {
+              _fAudio.pause(); _fIcon.textContent = '▶'; _fBtn.classList.remove('playing');
+            }
+          });
+        }
+
+        if (_fWrap) {
+          _fWrap.addEventListener('click', e => {
+            if (!_fAudio || !_fAudio.duration) return;
+            const r = _fWrap.getBoundingClientRect();
+            _fAudio.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * _fAudio.duration;
+          });
+        }
+
+        if (_fAudio) {
+          _fAudio.addEventListener('timeupdate', () => {
+            if (!_fAudio.duration) return;
+            if (_fBar)  _fBar.style.width = (_fAudio.currentTime / _fAudio.duration * 100) + '%';
+            if (_fTime) _fTime.textContent = fmt(_fAudio.currentTime) + ' / ' + fmt(_fAudio.duration);
+          });
+          _fAudio.addEventListener('ended', () => {
+            _fIcon.textContent = '▶'; _fBtn.classList.remove('playing');
+            _fBar.style.width = '0%'; _fTime.textContent = '00:00';
+          });
+        }
+
+        // Update SYS panel
+        if (typeof SYS !== 'undefined' && typeof updateSysStatus === 'function') {
+          SYS.unlockedFiles = (SYS.unlockedFiles || 0) + 1;
+          updateSysStatus();
+        }
+      }
+
+      /* ── Fail ───────────────────────────────────────────────── */
+      function triggerFail() {
+        phase = 'fail';
+        gameEl.style.display  = 'none';
+        failEl.style.display  = 'block';
+        if (failLevel) failLevel.textContent = level;
+      }
+
+      /* ── Start / Restart ────────────────────────────────────── */
+      function startGame() {
+        level    = 1;
+        sequence = [];
+        userInput= [];
+        phase    = 'idle';
+
+        intro.style.display = 'none';
+        failEl.style.display= 'none';
+        winEl.style.display = 'none';
+        gameEl.style.display= 'block';
+
+        clearCellClasses();
+        updateHUD();
+        growSequence();
+        showSequence();
+      }
+
+      startBtn.addEventListener('click',  startGame);
+      retryBtn.addEventListener('click',  startGame);
+      confirmBtn.addEventListener('click', () => {
+        if (phase === 'recall' && userInput.length > 0) checkAnswer();
+      });
+
+    })(); // end memory game IIFE
+
+  </script>
+</body>
+</html>
